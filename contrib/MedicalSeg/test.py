@@ -93,8 +93,7 @@ def main(args):
     losses = cfg.loss
     test_dataset = cfg.test_dataset
 
-    msg = '\n---------------Config Information---------------\n'
-    msg += str(cfg)
+    msg = '\n---------------Config Information---------------\n' + str(cfg)
     msg += '------------------------------------------------'
     logger.info(msg)
 

@@ -56,15 +56,14 @@ class Raster:
         super(Raster, self).__init__()
         if IMPORT_STATE is False:
             raise ("Can't import rasterio!")
-        if osp.exists(tif_path):
-            self.src_data = rasterio.open(tif_path)
-            self.geoinfo = self.__getRasterInfo()
-            self.show_band = list(show_band)
-            self.grid_size = np.array(grid_size)
-            self.overlap = np.array(overlap)
-            self.open_grid = open_grid
-        else:
+        if not osp.exists(tif_path):
             raise ("{0} not exists!".format(tif_path))
+        self.src_data = rasterio.open(tif_path)
+        self.geoinfo = self.__getRasterInfo()
+        self.show_band = list(show_band)
+        self.grid_size = np.array(grid_size)
+        self.overlap = np.array(overlap)
+        self.open_grid = open_grid
         self.thumbnail_min = 2000
 
     def __del__(self) -> None:
@@ -79,19 +78,15 @@ class Raster:
         geoinfo.ysize = meta["height"]
         geoinfo.geotf = meta["transform"]
         geoinfo.crs = meta["crs"]
-        if geoinfo.crs is not None:
-            geoinfo.crs_wkt = geoinfo.crs.wkt
-        else:
-            geoinfo.crs_wkt = None
+        geoinfo.crs_wkt = geoinfo.crs.wkt if geoinfo.crs is not None else None
         return geoinfo
 
     def checkOpenGrid(self, thumbnail_min: Union[int, None]) -> bool:
         if isinstance(thumbnail_min, int):
             self.thumbnail_min = thumbnail_min
-        if max(self.geoinfo.xsize, self.geoinfo.ysize) <= self.thumbnail_min:
-            self.open_grid = False
-        else:
-            self.open_grid = True
+        self.open_grid = (
+            max(self.geoinfo.xsize, self.geoinfo.ysize) > self.thumbnail_min
+        )
         return self.open_grid
 
     def setBand(self, bands: Union[List[int], Tuple[int]]) -> None:
@@ -125,13 +120,13 @@ class Raster:
     def getArray(self) -> Tuple[np.ndarray]:
         rgb = []
         if not self.open_grid:
-            for b in self.show_band:
-                rgb.append(self.src_data.read(b))
+            rgb.extend(self.src_data.read(b) for b in self.show_band)
             geotf = self.geoinfo.geotf
         else:
-            for b in self.show_band:
-                rgb.append(
-                    get_thumbnail(self.src_data.read(b), self.thumbnail_min))
+            rgb.extend(
+                get_thumbnail(self.src_data.read(b), self.thumbnail_min)
+                for b in self.show_band
+            )
             geotf = None
         ima = np.stack(rgb, axis=2)  # cv2.merge(rgb)
         if self.geoinfo["dtype"] != "uint8":
@@ -145,9 +140,7 @@ class Raster:
         ul = grid_idx * (self.grid_size - self.overlap)
         lr = ul + self.grid_size
         window = Window(ul[1], ul[0], (lr[1] - ul[1]), (lr[0] - ul[0]))
-        rgb = []
-        for b in self.show_band:
-            rgb.append(self.src_data.read(b, window=window))
+        rgb = [self.src_data.read(b, window=window) for b in self.show_band]
         win_tf = self.src_data.window_transform(window)
         ima = cv2.merge([np.uint16(c) for c in rgb])
         if self.geoinfo["dtype"] == "uint32":

@@ -24,8 +24,7 @@ class BaseMLMatting(object):
     def __call__(self, image, trimap):
         image = self.__to_float64(image)
         trimap = self.__to_float64(trimap)
-        alpha_matte = self.alpha_estimator(image, trimap, **self.kargs)
-        return alpha_matte
+        return self.alpha_estimator(image, trimap, **self.kargs)
 
     def __to_float64(self, x):
         x_dtype = x.dtype
@@ -75,9 +74,9 @@ if __name__ == "__main__":
     import cv2
 
     root = "/mnt/liuyi22/PaddlePaddle/PaddleSeg/Matting/data/examples/"
-    image_path = root + "lemur.png"
-    trimap_path = root + "lemur_trimap.png"
-    cutout_path = root + "lemur_cutout.png"
+    image_path = f"{root}lemur.png"
+    trimap_path = f"{root}lemur_trimap.png"
+    cutout_path = f"{root}lemur_cutout.png"
     image = cv2.cvtColor(
         cv2.imread(image_path).astype("float64"), cv2.COLOR_BGR2RGB) / 255.0
 

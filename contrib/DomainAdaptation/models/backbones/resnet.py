@@ -175,7 +175,7 @@ class ResNetMulti(nn.Layer):
                 downsample=downsample))
         self.inplanes = planes * block.expansion
 
-        for i in range(1, blocks):
+        for _ in range(1, blocks):
             nnlayers.append(block(self.inplanes, planes, dilation=dilation))
 
         return nn.Sequential(*nnlayers)
@@ -215,20 +215,11 @@ class ResNetMulti(nn.Layer):
         requires_grad is set to False in deeplab_resnet.py, therefore this function does not return
         any batchnorm parameter
         """
-        b = []
+        b = [self.conv1, self.bn1, self.layer1, self.layer2, self.layer3, self.layer4]
 
-        b.append(self.conv1)
-        b.append(self.bn1)
-        b.append(self.layer1)
-        b.append(self.layer2)
-        b.append(self.layer3)
-        b.append(self.layer4)
-
-        for i in range(len(b)):
-            for j in b[i].modules():
-                jj = 0
+        for item in b:
+            for j in item.modules():
                 for k in j.parameters():
-                    jj += 1
                     if not k.stop_gradient:
                         yield k
 
@@ -237,13 +228,11 @@ class ResNetMulti(nn.Layer):
         This generator returns all the parameters for the last layer of the net,
         which does the classification of pixel into classes
         """
-        b = []
-        b.append(self.layer5.parameters())
+        b = [self.layer5.parameters()]
         b.append(self.layer6.parameters())
 
-        for j in range(len(b)):
-            for i in b[j]:
-                yield i
+        for item in b:
+            yield from item
 
     def optim_parameters(self, lr):
         return [{
@@ -257,6 +246,4 @@ class ResNetMulti(nn.Layer):
 
 @manager.BACKBONES.add_component
 def ResNet101(**args):
-    model = ResNetMulti(
-        Bottleneck, num_layers=[3, 4, 23, 3], **args)  # add pretrain
-    return model
+    return ResNetMulti(Bottleneck, num_layers=[3, 4, 23, 3], **args)

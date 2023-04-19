@@ -69,10 +69,7 @@ class DIM(nn.Layer):
         x = paddle.concat([inputs['img'], inputs['trimap'] / 255], axis=1)
         fea_list = self.backbone(x)
 
-        # decoder stage
-        up_shape = []
-        for i in range(5):
-            up_shape.append(paddle.shape(fea_list[i])[-2:])
+        up_shape = [paddle.shape(fea_list[i])[-2:] for i in range(5)]
         alpha_raw = self.decoder(fea_list, up_shape)
         alpha_raw = F.interpolate(
             alpha_raw, input_shape, mode='bilinear', align_corners=False)
@@ -80,18 +77,17 @@ class DIM(nn.Layer):
         if self.stage < 2:
             return logit_dict
 
-        if self.stage >= 2:
-            # refine stage
-            refine_input = paddle.concat([inputs['img'], alpha_raw], axis=1)
-            alpha_refine = self.refine(refine_input)
+        # refine stage
+        refine_input = paddle.concat([inputs['img'], alpha_raw], axis=1)
+        alpha_refine = self.refine(refine_input)
 
-            # finally alpha
-            alpha_pred = alpha_refine + alpha_raw
-            alpha_pred = F.interpolate(
-                alpha_pred, input_shape, mode='bilinear', align_corners=False)
-            if not self.training:
-                alpha_pred = paddle.clip(alpha_pred, min=0, max=1)
-            logit_dict['alpha_pred'] = alpha_pred
+        # finally alpha
+        alpha_pred = alpha_refine + alpha_raw
+        alpha_pred = F.interpolate(
+            alpha_pred, input_shape, mode='bilinear', align_corners=False)
+        if not self.training:
+            alpha_pred = paddle.clip(alpha_pred, min=0, max=1)
+        logit_dict['alpha_pred'] = alpha_pred
         if self.training:
             loss_dict = self.loss(logit_dict, inputs)
             return logit_dict, loss_dict
@@ -108,25 +104,23 @@ class DIM(nn.Layer):
         else:
             self.loss_func_dict = loss_func_dict
 
-        loss = {}
         mask = label_dict['trimap'] == 128
-        loss['all'] = 0
-
+        loss = {'all': 0}
         if self.stage != 2:
             loss['alpha_raw'] = self.loss_func_dict['alpha_raw'][0](
                 logit_dict['alpha_raw'], label_dict['alpha'], mask)
             loss['alpha_raw'] = 0.5 * loss['alpha_raw']
-            loss['all'] = loss['all'] + loss['alpha_raw']
+            loss['all'] += loss['alpha_raw']
 
-        if self.stage == 1 or self.stage == 3:
+        if self.stage in [1, 3]:
             comp_pred = logit_dict['alpha_raw'] * label_dict['fg'] + \
-                (1 - logit_dict['alpha_raw']) * label_dict['bg']
+                    (1 - logit_dict['alpha_raw']) * label_dict['bg']
             loss['comp'] = self.loss_func_dict['comp'][0](
                 comp_pred, label_dict['img'], mask)
             loss['comp'] = 0.5 * loss['comp']
             loss['all'] = loss['all'] + loss['comp']
 
-        if self.stage == 2 or self.stage == 3:
+        if self.stage in [2, 3]:
             loss['alpha_pred'] = self.loss_func_dict['alpha_pred'][0](
                 logit_dict['alpha_pred'], label_dict['alpha'], mask)
             loss['all'] = loss['all'] + loss['alpha_pred']
@@ -203,6 +197,4 @@ class Refine(nn.Layer):
         x = self.conv1(x)
         x = self.conv2(x)
         x = self.conv3(x)
-        alpha = self.alpha_pred(x)
-
-        return alpha
+        return self.alpha_pred(x)

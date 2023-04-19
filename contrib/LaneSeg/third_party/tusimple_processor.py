@@ -68,12 +68,12 @@ class TusimpleProcessor:
             lane_coords = lane_coords_list[batch]
             path_list = im_path[batch].split("/")
             if is_dump_json:
-                json_pred = {}
-                json_pred['lanes'] = []
-                json_pred['run_time'] = run_time * 1000
-                json_pred['h_sample'] = []
-
-                json_pred['raw_file'] = os.path.join(*path_list[-4:])
+                json_pred = {
+                    'lanes': [],
+                    'run_time': run_time * 1000,
+                    'h_sample': [],
+                    'raw_file': os.path.join(*path_list[-4:]),
+                }
                 for l in lane_coords:
                     if len(l) == 0:
                         continue
@@ -87,7 +87,7 @@ class TusimpleProcessor:
             if is_view:
                 img = cv2.imread(im_path[batch])
                 if is_dump_json:
-                    img_name = '_'.join([x for x in path_list[-4:]])
+                    img_name = '_'.join(list(path_list[-4:]))
                     sub_dir = 'visual_eval'
                 else:
                     img_name = os.path.basename(im_path[batch])

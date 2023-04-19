@@ -42,8 +42,8 @@ def save_result(alpha, path, im_path, trimap=None, fg_estimate=True):
         os.makedirs(dirname)
     basename = os.path.basename(path)
     name = os.path.splitext(basename)[0]
-    alpha_save_path = os.path.join(dirname, name + '_alpha.png')
-    rgba_save_path = os.path.join(dirname, name + '_rgba.png')
+    alpha_save_path = os.path.join(dirname, f'{name}_alpha.png')
+    rgba_save_path = os.path.join(dirname, f'{name}_rgba.png')
 
     # save alpha matte
     if trimap is not None:
@@ -77,13 +77,12 @@ def reverse_transform(alpha, trans_info):
             h, w = item[1][0], item[1][1]
             alpha = alpha[:, :, 0:h, 0:w]
         else:
-            raise Exception("Unexpected info '{}' in im_info".format(item[0]))
+            raise Exception(f"Unexpected info '{item[0]}' in im_info")
     return alpha
 
 
 def preprocess(img, transforms, trimap=None):
-    data = {}
-    data['img'] = img
+    data = {'img': img}
     if trimap is not None:
         data['trimap'] = trimap
         data['gt_fields'] = ['trimap']
@@ -158,7 +157,7 @@ def predict(model,
                 im_file = im_path.replace(image_dir, '')
             else:
                 im_file = os.path.basename(im_path)
-            if im_file[0] == '/' or im_file[0] == '\\':
+            if im_file[0] in ['/', '\\']:
                 im_file = im_file[1:]
 
             save_path = os.path.join(save_dir, im_file)

@@ -98,25 +98,22 @@ class InteractiveController:
             是否成功设置模型, 失败原因
 
         """
-        if param_path is not None:
-            model_path = param_path.replace(".pdiparams", ".pdmodel")
-            if not osp.exists(model_path):
-                raise Exception(f"未在 {model_path} 找到模型文件")
-            if use_gpu is None:
-                if paddle.device.is_compiled_with_cuda(
-                ):  # TODO: 可以使用GPU却返回False
-                    use_gpu = True
-                else:
-                    use_gpu = False
-            logger.info(f"User paddle compiled with gpu: use_gpu {use_gpu}")
-            tic = time.time()
-            try:
-                self.model = EISegModel(model_path, param_path, use_gpu)
-                self.reset_predictor()  # 即刻生效
-            except KeyError as e:
-                return False, str(e)
-            logger.info(f"Load model {model_path} took {time.time() - tic}")
-            return True, "模型设置成功"
+        if param_path is None:
+            return
+        model_path = param_path.replace(".pdiparams", ".pdmodel")
+        if not osp.exists(model_path):
+            raise Exception(f"未在 {model_path} 找到模型文件")
+        if use_gpu is None:
+            use_gpu = bool(paddle.device.is_compiled_with_cuda())
+        logger.info(f"User paddle compiled with gpu: use_gpu {use_gpu}")
+        tic = time.time()
+        try:
+            self.model = EISegModel(model_path, param_path, use_gpu)
+            self.reset_predictor()  # 即刻生效
+        except KeyError as e:
+            return False, str(e)
+        logger.info(f"Load model {model_path} took {time.time() - tic}")
+        return True, "模型设置成功"
 
     def setImage(self, image: np.array):
         """设置当前标注的图片
@@ -348,25 +345,22 @@ class InteractiveController:
         if self.lccFilter:
             results_mask_for_vis = (self.getLargestCC(results_mask_for_vis) *
                                     self.curr_label_number)
-        vis = draw_with_blend_and_clicks(
+        return draw_with_blend_and_clicks(
             self.image,
             mask=results_mask_for_vis,
             alpha=alpha_blend,
             clicks_list=self.clicker.clicks_list,
             radius=click_radius,
-            palette=self.palette, )
-        return vis
+            palette=self.palette,
+        )
 
     def inImage(self, x: int, y: int):
         s = self.image.shape
-        if x < 0 or y < 0 or x >= s[1] or y >= s[0]:
-            return False
-        return True
+        return x >= 0 and y >= 0 and x < s[1] and y < s[0]
 
     @property
     def result_mask(self):
-        result_mask = self._result_mask.copy()
-        return result_mask
+        return self._result_mask.copy()
 
     @property
     def palette(self):

@@ -52,10 +52,7 @@ class Trainer():
         self.src_centers = [paddle.zeros((1, 19)) for _ in range(19)]
         self.tgt_centers = [paddle.zeros((1, 19)) for _ in range(19)]
 
-        if 'None' in cfg['resume_ema']:
-            self.resume_ema = None
-        else:
-            self.resume_ema = cfg['resume_ema']
+        self.resume_ema = None if 'None' in cfg['resume_ema'] else cfg['resume_ema']
 
     def train(self,
               train_dataset_src,

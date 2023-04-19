@@ -48,7 +48,7 @@ def reverse_transform(alpha, trans_info):
             h, w = item[1][0], item[1][1]
             alpha = alpha[:, :, 0:h, 0:w]
         else:
-            raise Exception("Unexpected info '{}' in im_info".format(item[0]))
+            raise Exception(f"Unexpected info '{item[0]}' in im_info")
     return alpha
 
 
@@ -62,11 +62,11 @@ def evaluate(model,
     model.eval()
     nranks = paddle.distributed.ParallelEnv().nranks
     local_rank = paddle.distributed.ParallelEnv().local_rank
-    if nranks > 1:
-        # Initialize parallel environment if not done.
-        if not paddle.distributed.parallel.parallel_helper._is_parallel_ctx_initialized(
-        ):
-            paddle.distributed.init_parallel_env()
+    if (
+        nranks > 1
+        and not paddle.distributed.parallel.parallel_helper._is_parallel_ctx_initialized()
+    ):
+        paddle.distributed.init_parallel_env()
 
     loader = paddle.io.DataLoader(
         eval_dataset,
@@ -89,8 +89,9 @@ def evaluate(model,
         metrics_data[key] = None
 
     if print_detail:
-        logger.info("Start evaluating (total_samples: {}, total_iters: {})...".
-                    format(len(eval_dataset), total_iters))
+        logger.info(
+            f"Start evaluating (total_samples: {len(eval_dataset)}, total_iters: {total_iters})..."
+        )
     progbar_val = progbar.Progbar(
         target=total_iters, verbose=1 if nranks < 2 else 2)
     reader_cost_averager = TimeAverager()
@@ -112,7 +113,7 @@ def evaluate(model,
             if trimap is not None:
                 trimap = trimap.numpy().astype('uint8')
             alpha_pred = np.round(alpha_pred * 255)
-            for key in metrics_ins.keys():
+            for key in metrics_ins:
                 metrics_data[key] = metrics_ins[key].update(alpha_pred,
                                                             alpha_gt, trimap)
 
@@ -126,11 +127,11 @@ def evaluate(model,
                 save_name = data['img_name'][0]
                 name, ext = os.path.splitext(save_name)
                 if save_name == img_name:
-                    save_name = name + '_' + str(i) + ext
+                    save_name = f'{name}_{str(i)}{ext}'
                     i += 1
                 else:
                     img_name = save_name
-                    save_name = name + '_' + str(i) + ext
+                    save_name = f'{name}_{str(i)}{ext}'
                     i = 1
 
                 save_alpha_pred(alpha_pred_one,
@@ -142,16 +143,18 @@ def evaluate(model,
             reader_cost = reader_cost_averager.get_average()
 
             if local_rank == 0 and print_detail:
-                show_list = [(k, v) for k, v in metrics_data.items()]
-                show_list = show_list + [('batch_cost', batch_cost),
-                                         ('reader cost', reader_cost)]
+                show_list = list(metrics_data.items())
+                show_list += [
+                    ('batch_cost', batch_cost),
+                    ('reader cost', reader_cost),
+                ]
                 progbar_val.update(iter + 1, show_list)
 
             reader_cost_averager.reset()
             batch_cost_averager.reset()
             batch_start = time.time()
 
-    for key in metrics_ins.keys():
+    for key in metrics_ins:
         metrics_data[key] = metrics_ins[key].evaluate()
     log_str = '[EVAL] '
     for key, value in metrics_data.items():

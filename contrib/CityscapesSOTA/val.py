@@ -106,8 +106,7 @@ def main(args):
             'The verification dataset is not specified in the configuration file.'
         )
 
-    msg = '\n---------------Config Information---------------\n'
-    msg += str(cfg)
+    msg = '\n---------------Config Information---------------\n' + str(cfg)
     msg += '------------------------------------------------'
     logger.info(msg)
 
@@ -115,8 +114,8 @@ def main(args):
     utils.load_entire_model(model, args.model_path)
 
     logger.info('Loaded trained params of model successfully')
-    logger.info('Aug_eval = {}'.format(args.aug_eval))
-    logger.info('Flip_horizontal = {}'.format(args.flip_horizontal))
+    logger.info(f'Aug_eval = {args.aug_eval}')
+    logger.info(f'Flip_horizontal = {args.flip_horizontal}')
 
     evaluate(
         model,

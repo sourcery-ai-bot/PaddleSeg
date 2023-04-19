@@ -82,8 +82,7 @@ def main(args):
 
     cfg = Config(args.cfg)
 
-    msg = '\n---------------Config Information---------------\n'
-    msg += str(cfg)
+    msg = '\n---------------Config Information---------------\n' + str(cfg)
     msg += '------------------------------------------------'
     logger.info(msg)
 
@@ -95,7 +94,7 @@ def main(args):
         trimap_list = None
     else:
         trimap_list, _ = get_image_list(args.trimap_path)
-    logger.info('Number of predict images = {}'.format(len(image_list)))
+    logger.info(f'Number of predict images = {len(image_list)}')
 
     predict(
         model,

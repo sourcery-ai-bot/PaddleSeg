@@ -52,6 +52,6 @@ class RSGrids:
         return img, mask
 
     def splicingList(self, save_path: str) -> np.ndarray:
-        mask = self.raster.saveMaskbyGrids(self.mask_grids, save_path,
-                                           self.raster.geoinfo)
-        return mask
+        return self.raster.saveMaskbyGrids(
+            self.mask_grids, save_path, self.raster.geoinfo
+        )

@@ -120,7 +120,7 @@ class Predictor:
             cut_height=cut_height,
             save_dir=args.save_dir)
 
-        for i, im_path in enumerate(imgs):
+        for im_path in imgs:
             im = cv2.imread(im_path)
             im = im[cut_height:, :, :]
             im = im.astype('float32')

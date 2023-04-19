@@ -57,25 +57,26 @@ def get_polygon(label, sample="Dynamic", img_size=None, building=False):
             rela = (
                 idx,  # own
                 hierarchy[-1] if hierarchy[-1] != -1 else None, )  # parent
-            polygon = []
-            for p in out:
-                polygon.append(p[0])
+            polygon = [p[0] for p in out]
             polygons.append(polygon)  # 边界
             relas.append(rela)  # 关系
         for i in range(len(relas)):
             if relas[i][1] != None:  # 有父圈
                 for j in range(len(relas)):
-                    if relas[j][0] == relas[i][1]:  # i的父圈就是j（i是j的子圈）
-                        if polygons[i] is not None and polygons[j] is not None:
-                            min_i, min_o = __find_min_point(polygons[i],
-                                                            polygons[j])
-                            # 改变顺序
-                            polygons[i] = __change_list(polygons[i], min_i)
-                            polygons[j] = __change_list(polygons[j], min_o)
-                            # 连接
-                            if min_i != -1 and len(polygons[i]) > 0:
-                                polygons[j].extend(polygons[i])  # 连接内圈
-                            polygons[i] = None
+                    if (
+                        relas[j][0] == relas[i][1]
+                        and polygons[i] is not None
+                        and polygons[j] is not None
+                    ):
+                        min_i, min_o = __find_min_point(polygons[i],
+                                                        polygons[j])
+                        # 改变顺序
+                        polygons[i] = __change_list(polygons[i], min_i)
+                        polygons[j] = __change_list(polygons[j], min_o)
+                        # 连接
+                        if min_i != -1 and len(polygons[i]) > 0:
+                            polygons[j].extend(polygons[i])  # 连接内圈
+                        polygons[i] = None
         polygons = list(filter(None, polygons))  # 清除加到外圈的内圈多边形
         if img_size is not None:
             polygons = check_size_minmax(polygons, img_size)
@@ -119,9 +120,9 @@ def __cal_ang(p1, p2, p3):
                                                                          p3[1]))
     c = math.sqrt((p1[0] - p2[0]) * (p1[0] - p2[0]) + (p1[1] - p2[1]) * (p1[1] -
                                                                          p2[1]))
-    ang = math.degrees(math.acos(
-        (b**2 - a**2 - c**2) / (-2 * a * c + eps)))  # p2对应
-    return ang
+    return math.degrees(
+        math.acos((b**2 - a**2 - c**2) / (-2 * a * c + eps))
+    )
 
 
 # 计算两点距离
@@ -174,8 +175,7 @@ def approx_poly_DIY(contour, min_dist=10, ang_err=5):
         except:
             # i += 1
             del cs[i]
-    res = np.array(cs).reshape([-1, 1, 2])
-    return res
+    return np.array(cs).reshape([-1, 1, 2])
 
 
 def check_size_minmax(polygons, img_size):

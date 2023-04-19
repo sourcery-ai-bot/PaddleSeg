@@ -48,8 +48,8 @@ class HumanMatting(nn.Layer):
         if if_refine:
             if backbone_scale > 0.5:
                 raise ValueError(
-                    'Backbone_scale should not be greater than 1/2, but it is {}'
-                    .format(backbone_scale))
+                    f'Backbone_scale should not be greater than 1/2, but it is {backbone_scale}'
+                )
         else:
             backbone_scale = 1
 
@@ -207,13 +207,14 @@ class HumanMatting(nn.Layer):
     def forward(self, data):
         src = data['img']
         src_h, src_w = paddle.shape(src)[2:]
-        if self.if_refine:
-            # It is not need when exporting.
-            if isinstance(src_h, paddle.Tensor):
-                if (src_h % 4 != 0) or (src_w % 4) != 0:
-                    raise ValueError(
-                        'The input image must have width and height that are divisible by 4'
-                    )
+        if (
+            self.if_refine
+            and isinstance(src_h, paddle.Tensor)
+            and ((src_h % 4 != 0) or (src_w % 4) != 0)
+        ):
+            raise ValueError(
+                'The input image must have width and height that are divisible by 4'
+            )
 
         # Downsample src for backbone
         src_sm = F.interpolate(
@@ -275,19 +276,18 @@ class HumanMatting(nn.Layer):
             # Clamp outputs
             pha = paddle.clip(pha, 0., 1.)
 
-        if self.training:
-            logit_dict = {
-                'glance': glance_sigmoid,
-                'focus': focus_sigmoid,
-                'fusion': pha_sm,
-                'error': err_sm
-            }
-            if self.if_refine:
-                logit_dict['refine'] = pha
-            loss_dict = self.loss(logit_dict, data)
-            return logit_dict, loss_dict
-        else:
+        if not self.training:
             return pha if self.if_refine else pha_sm
+        logit_dict = {
+            'glance': glance_sigmoid,
+            'focus': focus_sigmoid,
+            'fusion': pha_sm,
+            'error': err_sm
+        }
+        if self.if_refine:
+            logit_dict['refine'] = pha
+        loss_dict = self.loss(logit_dict, data)
+        return logit_dict, loss_dict
 
     def loss(self, logit_dict, label_dict, loss_func_dict=None):
         if loss_func_dict is None:
@@ -301,8 +301,6 @@ class HumanMatting(nn.Layer):
         else:
             self.loss_func_dict = loss_func_dict
 
-        loss = {}
-
         # glance loss computation
         # get glance label
         glance_label = F.interpolate(
@@ -315,8 +313,7 @@ class HumanMatting(nn.Layer):
         glance_label = glance_label_trans + glance_label_bg * 2
         loss_glance = self.loss_func_dict['glance'][0](
             paddle.log(logit_dict['glance'] + 1e-6), glance_label.squeeze(1))
-        loss['glance'] = loss_glance
-
+        loss = {'glance': loss_glance}
         # focus loss computation
         focus_label = F.interpolate(
             label_dict['alpha'],
@@ -366,8 +363,7 @@ class HumanMatting(nn.Layer):
         index = paddle.argmax(glance_sigmoid, axis=1, keepdim=True)
         transition_mask = (index == 1).astype('float32')
         fg = (index == 0).astype('float32')
-        fusion_sigmoid = focus_sigmoid * transition_mask + fg
-        return fusion_sigmoid
+        return focus_sigmoid * transition_mask + fg
 
     def init_weight(self):
         if self.pretrained is not None:

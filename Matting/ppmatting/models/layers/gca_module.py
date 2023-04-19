@@ -144,31 +144,29 @@ class GuidedCxtAtten(nn.Layer):
             known_scale * paddle.less_equal(unknown_ps, paddle.to_tensor([0.])))
         # mask itself, self-mask only applied to unknown area
         out = out + self_mask * unknown_ps
-        gca_score = F.softmax(out, axis=1)
-
-        return gca_score
+        return F.softmax(out, axis=1)
 
     def propagate_alpha_feature(self, gca_score, alpha_ps):
 
         alpha_ps = alpha_ps[0]  # squeeze dim 0
-        if self.rate == 1:
-            gca_score = self.pad(gca_score, kernel_size=2, stride=1)
-            alpha_ps = paddle.transpose(alpha_ps, (1, 0, 2, 3))
-            out = F.conv2d(gca_score, alpha_ps) / 4.
-        else:
-            out = F.conv2d_transpose(
-                gca_score, alpha_ps, stride=self.rate, padding=1) / 4.
+        if self.rate != 1:
+            return (
+                F.conv2d_transpose(
+                    gca_score, alpha_ps, stride=self.rate, padding=1
+                )
+                / 4.0
+            )
 
-        return out
+        gca_score = self.pad(gca_score, kernel_size=2, stride=1)
+        alpha_ps = paddle.transpose(alpha_ps, (1, 0, 2, 3))
+        return F.conv2d(gca_score, alpha_ps) / 4.
 
     def compute_similarity_map(self, img_feat, img_ps):
         img_ps = img_ps[0]  # squeeze dim 0
         # convolve the feature to get correlation (similarity) map
         img_ps_normed = img_ps / paddle.clip(self.l2_norm(img_ps), 1e-4)
         img_feat = F.pad(img_feat, (1, 1, 1, 1), mode='reflect')
-        similarity_map = F.conv2d(img_feat, img_ps_normed)
-
-        return similarity_map
+        return F.conv2d(img_feat, img_ps_normed)
 
     def get_self_correlation_mask(self, img_feat):
         _, _, h, w = img_feat.shape

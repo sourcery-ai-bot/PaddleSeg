@@ -66,8 +66,9 @@ def evaluate(model,
     total_iters = len(loader)
 
     if print_detail:
-        logger.info("Start evaluating (total_samples: {}, total_iters: {})...".
-                    format(len(eval_dataset), total_iters))
+        logger.info(
+            f"Start evaluating (total_samples: {len(eval_dataset)}, total_iters: {total_iters})..."
+        )
     progbar_val = progbar.Progbar(target=total_iters, verbose=1)
     reader_cost_averager = TimeAverager()
     batch_cost_averager = TimeAverager()

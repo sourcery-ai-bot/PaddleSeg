@@ -45,17 +45,16 @@ class Eval():
         self.num_class = num_class
         self.confusion_matrix = np.zeros((self.num_class, ) * 2)
         self.ignore_index = None
-        self.synthia = True if num_class == 16 else False
+        self.synthia = num_class == 16
 
     def pixel_accuracy(self):
-        if np.sum(self.confusion_matrix) == 0:
-            print("Attention: pixel_total is zero!!!")
-            PA = 0
-        else:
-            PA = np.diag(self.confusion_matrix).sum(
-            ) / self.confusion_matrix.sum()
+        if np.sum(self.confusion_matrix) != 0:
+            return (
+                np.diag(self.confusion_matrix).sum() / self.confusion_matrix.sum()
+            )
 
-        return PA
+        print("Attention: pixel_total is zero!!!")
+        return 0
 
     def mean_pixel_accuracy(self, out_16_13=False):
         MPA = np.diag(self.confusion_matrix) / self.confusion_matrix.sum(axis=1)
@@ -144,18 +143,56 @@ class Eval():
                'Pred_Retio')
         # if out_16_13: MIoU = MIoU[synthia_set_16]
         for ind_class in range(len(MIoU)):
-            pa = str(round(MPA[ind_class] * 100, 2)) if not np.isnan(MPA[
-                ind_class]) else 'nan'
-            iou = str(round(MIoU[ind_class] * 100, 2)) if not np.isnan(MIoU[
-                ind_class]) else 'nan'
-            pc = str(round(Precision[ind_class] * 100, 2)) if not np.isnan(
-                Precision[ind_class]) else 'nan'
-            cr = str(round(Class_ratio[ind_class] * 100, 2)) if not np.isnan(
-                Class_ratio[ind_class]) else 'nan'
-            pr = str(round(Pred_retio[ind_class] * 100, 2)) if not np.isnan(
-                Pred_retio[ind_class]) else 'nan'
-            log_fn('===>' + name_classes[ind_class] + ':\t' + pa + '\t' + iou +
-                   '\t' + pc + '\t' + cr + '\t' + pr)
+            pa = (
+                'nan'
+                if np.isnan(MPA[ind_class])
+                else str(round(MPA[ind_class] * 100, 2))
+            )
+            iou = (
+                'nan'
+                if np.isnan(MIoU[ind_class])
+                else str(round(MIoU[ind_class] * 100, 2))
+            )
+            pc = (
+                'nan'
+                if np.isnan(Precision[ind_class])
+                else str(round(Precision[ind_class] * 100, 2))
+            )
+            cr = (
+                'nan'
+                if np.isnan(Class_ratio[ind_class])
+                else str(round(Class_ratio[ind_class] * 100, 2))
+            )
+            pr = (
+                'nan'
+                if np.isnan(Pred_retio[ind_class])
+                else str(round(Pred_retio[ind_class] * 100, 2))
+            )
+            log_fn(
+                (
+                    (
+                        (
+                            (
+                                (
+                                    (
+                                        f'===>{name_classes[ind_class]}'
+                                        + ':\t'
+                                        + pa
+                                        + '\t'
+                                        + iou
+                                        + '\t'
+                                    )
+                                    + pc
+                                )
+                                + '\t'
+                            )
+                            + cr
+                        )
+                        + '\t'
+                    )
+                    + pr
+                )
+            )
 
     # generate confusion matrix
     def __generate_matrix(self, gt_image, pre_image):
@@ -163,8 +200,7 @@ class Eval():
         mask = (gt_image >= 0) & (gt_image < self.num_class)
         label = self.num_class * gt_image[mask].astype('int') + pre_image[mask]
         count = np.bincount(label, minlength=self.num_class**2)
-        confusion_matrix = count.reshape(self.num_class, self.num_class)
-        return confusion_matrix
+        return count.reshape(self.num_class, self.num_class)
 
     def add_batch(self, gt_image, pre_image):
         # assert the size of two images are same
@@ -201,11 +237,11 @@ def evaluate(model,
 
     nranks = paddle.distributed.ParallelEnv().nranks
     local_rank = paddle.distributed.ParallelEnv().local_rank
-    if nranks > 1:
-        # Initialize parallel environment if not done.
-        if not paddle.distributed.parallel.parallel_helper._is_parallel_ctx_initialized(
-        ):
-            paddle.distributed.init_parallel_env()
+    if (
+        nranks > 1
+        and not paddle.distributed.parallel.parallel_helper._is_parallel_ctx_initialized()
+    ):
+        paddle.distributed.init_parallel_env()
 
     batch_sampler = paddle.io.DistributedBatchSampler(
         eval_dataset, batch_size=1, shuffle=False, drop_last=True)

@@ -91,31 +91,31 @@ class DeepLabV2(nn.Layer):
             ]  # x6, x_aug
 
     def init_weight(self):
-        if self.pretrained is not None:
-            para_state_dict = paddle.load(self.pretrained)
-            model_state_dict = self.backbone.state_dict()
-            keys = model_state_dict.keys()
-            num_params_loaded = 0
-            for k in keys:
-                k_parts = k.split('.')
-                torchkey = 'backbone.' + k
-                if k_parts[1] == 'layer5':
-                    logger.warning("{} should not be loaded".format(k))
-                elif torchkey not in para_state_dict:
-                    logger.warning("{} is not in pretrained model".format(k))
-                elif list(para_state_dict[torchkey].shape) != list(
+        if self.pretrained is None:
+            return
+        para_state_dict = paddle.load(self.pretrained)
+        model_state_dict = self.backbone.state_dict()
+        keys = model_state_dict.keys()
+        num_params_loaded = 0
+        for k in keys:
+            k_parts = k.split('.')
+            torchkey = f'backbone.{k}'
+            if k_parts[1] == 'layer5':
+                logger.warning(f"{k} should not be loaded")
+            elif torchkey not in para_state_dict:
+                logger.warning(f"{k} is not in pretrained model")
+            elif list(para_state_dict[torchkey].shape) != list(
                         model_state_dict[k].shape):
-                    logger.warning(
-                        "[SKIP] Shape of pretrained params {} doesn't match.(Pretrained: {}, Actual: {})"
-                        .format(k, para_state_dict[torchkey].shape,
-                                model_state_dict[k].shape))
-                else:
-                    model_state_dict[k] = para_state_dict[torchkey]
-                    num_params_loaded += 1
-            self.backbone.set_dict(model_state_dict)
-            logger.info("There are {}/{} variables loaded into {}.".format(
-                num_params_loaded,
-                len(model_state_dict), self.backbone.__class__.__name__))
+                logger.warning(
+                    f"[SKIP] Shape of pretrained params {k} doesn't match.(Pretrained: {para_state_dict[torchkey].shape}, Actual: {model_state_dict[k].shape})"
+                )
+            else:
+                model_state_dict[k] = para_state_dict[torchkey]
+                num_params_loaded += 1
+        self.backbone.set_dict(model_state_dict)
+        logger.info(
+            f"There are {num_params_loaded}/{len(model_state_dict)} variables loaded into {self.backbone.__class__.__name__}."
+        )
 
 
 class edge_branch(nn.Layer):

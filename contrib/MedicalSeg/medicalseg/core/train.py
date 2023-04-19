@@ -132,11 +132,7 @@ def train(model,
             if hasattr(model, 'data_format') and model.data_format == 'NDHWC':
                 images = images.transpose((0, 2, 3, 4, 1))
 
-            if nranks > 1:
-                logits_list = ddp_model(images)
-            else:
-                logits_list = model(images)
-
+            logits_list = ddp_model(images) if nranks > 1 else model(images)
             # label.shape: (num_class, D, H, W) logit.shape: (N, num_class, D, H, W)
             loss_list, per_channel_dice = loss_computation(
                 logits_list=logits_list, labels=labels, losses=losses)
@@ -201,8 +197,7 @@ def train(model,
                     # Record all losses if there are more than 2 losses.
                     if len(avg_loss_list) > 1:
                         for i, loss in enumerate(avg_loss_list):
-                            log_writer.add_scalar('Train/loss_{}'.format(i),
-                                                  loss, iter)
+                            log_writer.add_scalar(f'Train/loss_{i}', loss, iter)
 
                     log_writer.add_scalar('Train/mdice', mdice, iter)
                     log_writer.add_scalar('Train/lr', lr, iter)
@@ -237,8 +232,7 @@ def train(model,
                 model.train()
 
             if (iter % save_interval == 0 or iter == iters) and local_rank == 0:
-                current_save_dir = os.path.join(save_dir,
-                                                "iter_{}".format(iter))
+                current_save_dir = os.path.join(save_dir, f"iter_{iter}")
                 if not os.path.isdir(current_save_dir):
                     os.makedirs(current_save_dir)
                 paddle.save(model.state_dict(),

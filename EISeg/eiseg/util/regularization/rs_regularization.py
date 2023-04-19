@@ -27,7 +27,7 @@ from .cal_line import line, intersection, par_line_dist, point_in_line
 
 
 def boundary_regularization(contours, img_shape, epsilon=6):
-    h, w = img_shape[0:2]
+    h, w = img_shape[:2]
     # 轮廓定位
     contours = np.squeeze(contours)
     # 轮廓精简DP
@@ -91,8 +91,7 @@ def boundary_regularization(contours, img_shape, epsilon=6):
             correct_points.append([rotate_point_0, rotate_point_1])
     correct_points = np.array(correct_points)
     # 相邻边校正，垂直取交点，平行平移短边或者加线
-    final_points = []
-    final_points.append(correct_points[0][0])
+    final_points = [correct_points[0][0]]
     for i in range(correct_points.shape[0] - 1):
         cur_index = i
         next_index = i + 1 if i < correct_points.shape[0] - 1 else 0
@@ -102,16 +101,13 @@ def boundary_regularization(contours, img_shape, epsilon=6):
         next_edge_point_1 = correct_points[next_index][1]
         cur_para_vetr_idx = para_vetr_idxs[cur_index]
         next_para_vetr_idx = para_vetr_idxs[next_index]
+        # 垂直取交点
+        L1 = line(cur_edge_point_0, cur_edge_point_1)
+        L2 = line(next_edge_point_0, next_edge_point_1)
         if cur_para_vetr_idx != next_para_vetr_idx:
-            # 垂直取交点
-            L1 = line(cur_edge_point_0, cur_edge_point_1)
-            L2 = line(next_edge_point_0, next_edge_point_1)
             point_intersection = intersection(L1, L2)
             final_points.append(point_intersection)
-        elif cur_para_vetr_idx == next_para_vetr_idx:
-            # 平行分两种，一种加短线，一种平移，取决于距离阈值
-            L1 = line(cur_edge_point_0, cur_edge_point_1)
-            L2 = line(next_edge_point_0, next_edge_point_1)
+        else:
             marg = par_line_dist(L1, L2)
             if marg < 3:
                 # 平移
@@ -137,8 +133,7 @@ def boundary_regularization(contours, img_shape, epsilon=6):
                     add_mid_point[0], add_mid_point[1], next_edge_point_0[0],
                     next_edge_point_0[1], next_edge_point_1[0],
                     next_edge_point_1[1])
-                final_points.append(add_point_1)
-                final_points.append(add_point_2)
+                final_points.extend((add_point_1, add_point_2))
     final_points.append(final_points[0])
     final_points = np.array(final_points)
     final_points[:, 1] = h - final_points[:, 1]

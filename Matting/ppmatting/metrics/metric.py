@@ -46,9 +46,8 @@ class MSE:
             trimap = np.ones_like(gt) * 128
         if not (pred.shape == gt.shape == trimap.shape):
             raise ValueError(
-                'The shape of `pred`, `gt` and `trimap` should be equal. '
-                'but they are {}, {} and {}'.format(pred.shape, gt.shape,
-                                                    trimap.shape))
+                f'The shape of `pred`, `gt` and `trimap` should be equal. but they are {pred.shape}, {gt.shape} and {trimap.shape}'
+            )
         pred[trimap == 0] = 0
         pred[trimap == 255] = 255
 
@@ -65,8 +64,7 @@ class MSE:
         return mse_diff
 
     def evaluate(self):
-        mse = self.mse_diffs / self.count if self.count > 0 else 0
-        return mse
+        return self.mse_diffs / self.count if self.count > 0 else 0
 
 
 class SAD:
@@ -90,9 +88,8 @@ class SAD:
             trimap = np.ones_like(gt) * 128
         if not (pred.shape == gt.shape == trimap.shape):
             raise ValueError(
-                'The shape of `pred`, `gt` and `trimap` should be equal. '
-                'but they are {}, {} and {}'.format(pred.shape, gt.shape,
-                                                    trimap.shape))
+                f'The shape of `pred`, `gt` and `trimap` should be equal. but they are {pred.shape}, {gt.shape} and {trimap.shape}'
+            )
         pred[trimap == 0] = 0
         pred[trimap == 255] = 255
 
@@ -109,8 +106,7 @@ class SAD:
         return sad_diff
 
     def evaluate(self):
-        sad = self.sad_diffs / self.count if self.count > 0 else 0
-        return sad
+        return self.sad_diffs / self.count if self.count > 0 else 0
 
 
 class Grad:
@@ -169,9 +165,8 @@ class Grad:
             trimap = np.ones_like(gt) * 128
         if not (pred.shape == gt.shape == trimap.shape):
             raise ValueError(
-                'The shape of `pred`, `gt` and `trimap` should be equal. '
-                'but they are {}, {} and {}'.format(pred.shape, gt.shape,
-                                                    trimap.shape))
+                f'The shape of `pred`, `gt` and `trimap` should be equal. but they are {pred.shape}, {gt.shape} and {trimap.shape}'
+            )
         pred[trimap == 0] = 0
         pred[trimap == 255] = 255
 
@@ -196,8 +191,7 @@ class Grad:
         return grad_diff
 
     def evaluate(self):
-        grad = self.grad_diffs / self.count if self.count > 0 else 0
-        return grad
+        return self.grad_diffs / self.count if self.count > 0 else 0
 
 
 class Conn:
@@ -224,9 +218,8 @@ class Conn:
             trimap = np.ones_like(gt) * 128
         if not (pred.shape == gt.shape == trimap.shape):
             raise ValueError(
-                'The shape of `pred`, `gt` and `trimap` should be equal. '
-                'but they are {}, {} and {}'.format(pred.shape, gt.shape,
-                                                    trimap.shape))
+                f'The shape of `pred`, `gt` and `trimap` should be equal. but they are {pred.shape}, {gt.shape} and {trimap.shape}'
+            )
         pred[trimap == 0] = 0
         pred[trimap == 255] = 255
 
@@ -274,5 +267,4 @@ class Conn:
         return conn_diff
 
     def evaluate(self):
-        conn = self.conn_diffs / self.count if self.count > 0 else 0
-        return conn
+        return self.conn_diffs / self.count if self.count > 0 else 0

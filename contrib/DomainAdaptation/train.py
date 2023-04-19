@@ -118,10 +118,10 @@ def main(args):
         paddle.seed(args.seed)
         np.random.seed(args.seed)
         random.seed(args.seed)
-        logger.info('Set seed to {}'.format(args.seed))
+        logger.info(f'Set seed to {args.seed}')
 
     env_info = get_sys_env()
-    info = ['{}: {}'.format(k, v) for k, v in env_info.items()]
+    info = [f'{k}: {v}' for k, v in env_info.items()]
     info = '\n'.join(['', format('Environment Information', '-^48s')] + info +
                      ['-' * 48])
     logger.info(info)
@@ -152,14 +152,13 @@ def main(args):
             split='val', **cfg.dic["data"]["source"]["kwargs"])
     else:
         raise NotImplementedError()
-    if cfg.dic["data"]["target"]["dataset"] == 'cityscapes':
-        train_dataset_tgt = CityDataset(
-            split='train', **cfg.dic["data"]["target"]["kwargs"])
-        val_dataset_tgt = CityDataset(
-            split='val', **cfg.dic["data"]["target"]["kwargs"])
-    else:
+    if cfg.dic["data"]["target"]["dataset"] != 'cityscapes':
         raise NotImplementedError()
 
+    train_dataset_tgt = CityDataset(
+        split='train', **cfg.dic["data"]["target"]["kwargs"])
+    val_dataset_tgt = CityDataset(
+        split='val', **cfg.dic["data"]["target"]["kwargs"])
     val_dataset_tgt = val_dataset_tgt if args.do_eval else None
     val_dataset_src = val_dataset_src if args.do_eval else None
 
@@ -171,8 +170,7 @@ def main(args):
             'The length of train_dataset is 0. Please check if your dataset is valid'
         )
 
-    msg = '\n---------------Config Information---------------\n'
-    msg += str(cfg)
+    msg = '\n---------------Config Information---------------\n' + str(cfg)
     msg += '------------------------------------------------'
     logger.info(msg)
 

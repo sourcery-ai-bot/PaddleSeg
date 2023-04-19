@@ -29,8 +29,7 @@ def load_video(path, min_side=480):
             frame = cv2.resize(
                 frame, (new_w, new_h), interpolation=cv2.INTER_CUBIC)
         frame_list.append(frame)
-    frames = np.stack(frame_list, axis=0)
-    return frames
+    return np.stack(frame_list, axis=0)
 
 
 def load_masks(path, min_side=None):
@@ -40,7 +39,7 @@ def load_masks(path, min_side=None):
     first_frame = np.array(Image.open(fnames[0]))
     binary_mask = (first_frame.max() == 255)
 
-    for i, fname in enumerate(fnames):
+    for fname in fnames:
         if min_side:
             image = Image.open(fname)
             w, h = image.size
@@ -84,7 +83,4 @@ def aggregate_wbg(prob, keep_bg=False, hard=False):
     if hard:
         logits *= 1000
 
-    if keep_bg:
-        return F.softmax(logits, axis=0)
-    else:
-        return F.softmax(logits, axis=0)[1:]
+    return F.softmax(logits, axis=0) if keep_bg else F.softmax(logits, axis=0)[1:]

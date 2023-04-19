@@ -20,10 +20,7 @@ import paddle.inference as paddle_infer
 def load_model(model_path, param_path, use_gpu=None):
     config = paddle_infer.Config(model_path, param_path)
     if use_gpu is None:
-        if paddle.device.is_compiled_with_cuda():  # TODO: 可以使用GPU却返回False
-            use_gpu = True
-        else:
-            use_gpu = False
+        use_gpu = bool(paddle.device.is_compiled_with_cuda())
     if not use_gpu:
         config.enable_mkldnn()
         # TODO: fluid要废弃了，研究判断方式
@@ -36,12 +33,7 @@ def load_model(model_path, param_path, use_gpu=None):
         config.delete_pass("conv_elementwise_add_fuse_pass")
         config.switch_ir_optim()
         config.enable_memory_optim()
-    # config = paddle_infer.Config(model_path, param_path)
-    # config.enable_mkldnn()
-    # config.switch_ir_optim(True)
-    # config.set_cpu_math_library_num_threads(10)
-    model = paddle_infer.create_predictor(config)
-    return model
+    return paddle_infer.create_predictor(config)
 
 
 def jit_load(path):
@@ -95,8 +87,7 @@ def calculate_attention(model, mk16, qk16, pos_mask, neg_mask):
     model.run()
     output_names = model.get_output_names()
     output_handle = model.get_output_handle(output_names[0])
-    result = output_handle.copy_to_cpu()
-    return result
+    return output_handle.copy_to_cpu()
 
 
 def calculate_fusion(model, im, seg1, seg2, attn, time):
@@ -114,5 +105,4 @@ def calculate_fusion(model, im, seg1, seg2, attn, time):
     model.run()
     output_names = model.get_output_names()
     output_handle = model.get_output_handle(output_names[0])
-    result = output_handle.copy_to_cpu()
-    return result
+    return output_handle.copy_to_cpu()

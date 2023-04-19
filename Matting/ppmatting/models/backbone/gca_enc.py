@@ -96,9 +96,10 @@ class ResNet_D(nn.Layer):
 
         layers = [block(self.inplanes, planes, stride, downsample, norm_layer)]
         self.inplanes = planes * block.expansion
-        for _ in range(1, block_num):
-            layers.append(block(self.inplanes, planes, norm_layer=norm_layer))
-
+        layers.extend(
+            block(self.inplanes, planes, norm_layer=norm_layer)
+            for _ in range(1, block_num)
+        )
         return nn.Sequential(*layers)
 
     def forward(self, x):
@@ -124,10 +125,7 @@ class ResNet_D(nn.Layer):
         for layer in self.sublayers():
             if isinstance(layer, nn.Conv2D):
 
-                if hasattr(layer, "weight_orig"):
-                    param = layer.weight_orig
-                else:
-                    param = layer.weight
+                param = layer.weight_orig if hasattr(layer, "weight_orig") else layer.weight
                 param_init.xavier_uniform(param)
 
             elif isinstance(layer, (nn.BatchNorm, nn.SyncBatchNorm)):
@@ -265,10 +263,7 @@ class ResGuidedCxtAtten(ResNet_D):
         for layer in self.sublayers():
             if isinstance(layer, nn.Conv2D):
                 initializer = nn.initializer.XavierUniform()
-                if hasattr(layer, "weight_orig"):
-                    param = layer.weight_orig
-                else:
-                    param = layer.weight
+                param = layer.weight_orig if hasattr(layer, "weight_orig") else layer.weight
                 initializer(param, param.block)
 
             elif isinstance(layer, (nn.BatchNorm, nn.SyncBatchNorm)):

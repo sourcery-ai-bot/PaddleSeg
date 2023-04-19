@@ -158,13 +158,10 @@ class InferenceCore:
         self.k = num_objects
 
     def get_image_buffered(self, idx):
-        if idx not in self.image_buf:
-            # Flush buffer
-            if len(self.image_buf) > self.i_buf_size:
-                self.image_buf = {}
+        if idx not in self.image_buf and len(self.image_buf) > self.i_buf_size:
+            self.image_buf = {}
         self.image_buf[idx] = self.images[:, idx]
-        result = self.image_buf[idx]
-        return result
+        return self.image_buf[idx]
         # return self.images[:, idx]
 
     def get_query_kv_mask(self, idx, this_k, this_v):
@@ -255,7 +252,7 @@ class InferenceCore:
 
             # In-place fusion, maximizes the use of queried buffer
             # esp. for long sequence where the buffer will be flushed
-            if (closest_ti != self.t) and (closest_ti != -1):
+            if closest_ti not in [self.t, -1]:
                 self.prob[:, ti] = self.fuse_one_frame(
                     closest_ti, idx, ti, self.prob[:, ti], out_mask, key_k,
                     quary_key)

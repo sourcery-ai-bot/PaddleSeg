@@ -206,7 +206,7 @@ def auto_tune(args, imgs, img_nums):
     input_names = predictor.get_input_names()
     input_handle = predictor.get_input_handle(input_names[0])
 
-    for i in range(0, num):
+    for i in range(num):
         data = np.array([cfg.transforms(imgs[i])[0]])
         input_handle.reshape(data.shape)
         input_handle.copy_from_cpu(data)
@@ -289,15 +289,15 @@ class Predictor:
         """
         logger.info("using GPU")
         self.pred_cfg.enable_use_gpu(100, 0)
-        precision_map = {
-            "fp16": PrecisionType.Half,
-            "fp32": PrecisionType.Float32,
-            "int8": PrecisionType.Int8
-        }
-        precision_mode = precision_map[self.args.precision]
-
         if self.args.use_trt:
             logger.info("Use TRT")
+            precision_map = {
+                "fp16": PrecisionType.Half,
+                "fp32": PrecisionType.Float32,
+                "int8": PrecisionType.Int8
+            }
+            precision_mode = precision_map[self.args.precision]
+
             self.pred_cfg.enable_tensorrt_engine(
                 workspace_size=1 << 30,
                 max_batch_size=1,
@@ -307,7 +307,7 @@ class Predictor:
                 use_calib_mode=False)
 
             if use_auto_tune(self.args) and \
-                os.path.exists(self.args.auto_tuned_shape_file):
+                    os.path.exists(self.args.auto_tuned_shape_file):
                 logger.info("Use auto tuned dynamic shape")
                 allow_build_at_runtime = True
                 self.pred_cfg.enable_tuned_tensorrt_dynamic_shape(
@@ -324,11 +324,10 @@ class Predictor:
         self.imgs_dir = imgs_dir
         num = len(imgs)
         input_names = self.predictor.get_input_names()
-        input_handle = {}
-
-        for i in range(len(input_names)):
-            input_handle[input_names[i]] = self.predictor.get_input_handle(
-                input_names[i])
+        input_handle = {
+            input_names[i]: self.predictor.get_input_handle(input_names[i])
+            for i in range(len(input_names))
+        }
         output_names = self.predictor.get_output_names()
         output_handle = self.predictor.get_output_handle(output_names[0])
         args = self.args
@@ -341,7 +340,7 @@ class Predictor:
                     if trimaps is not None:
                         trimap_inputs = []
                     trans_info = []
-                    for j in range(i, i + args.batch_size):
+                    for _ in range(i, i + args.batch_size):
                         img = imgs[i]
                         trimap = trimaps[i] if trimaps is not None else None
                         data = self._preprocess(img=img, trimap=trimap)
@@ -376,7 +375,7 @@ class Predictor:
             if trimaps is not None:
                 trimap_inputs = []
             trans_info = []
-            for j in range(i, i + args.batch_size):
+            for _ in range(i, i + args.batch_size):
                 img = imgs[i]
                 trimap = trimaps[i] if trimaps is not None else None
                 data = self._preprocess(img=img, trimap=trimap)
@@ -414,8 +413,7 @@ class Predictor:
         logger.info("Finish")
 
     def _preprocess(self, img, trimap=None):
-        data = {}
-        data['img'] = img
+        data = {'img': img}
         if trimap is not None:
             data['trimap'] = trimap
             data['gt_fields'] = ['trimap']
@@ -450,11 +448,11 @@ class Predictor:
         else:
             img_path = os.path.basename(img_path)
         name, ext = os.path.splitext(img_path)
-        if name[0] == '/' or name[0] == '\\':
+        if name[0] in ['/', '\\']:
             name = name[1:]
 
-        alpha_save_path = os.path.join(args.save_dir, name + '_alpha.png')
-        rgba_save_path = os.path.join(args.save_dir, name + '_rgba.png')
+        alpha_save_path = os.path.join(args.save_dir, f'{name}_alpha.png')
+        rgba_save_path = os.path.join(args.save_dir, f'{name}_rgba.png')
 
         # save alpha
         mkdir(alpha_save_path)

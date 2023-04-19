@@ -62,7 +62,7 @@ class GTA5Dataset(CityDataset):
         self.gaussian_blur = gaussian_blur
 
         # Files
-        item_list_filepath = os.path.join(self.list_path, self.split + ".txt")
+        item_list_filepath = os.path.join(self.list_path, f"{self.split}.txt")
         if not os.path.exists(item_list_filepath):
             print(item_list_filepath)
             raise Warning("split must be train/val/trainval/test/all")
@@ -93,8 +93,9 @@ class GTA5Dataset(CityDataset):
             33: 18
         }
 
-        print("{} num images in GTA5 {} set have been loaded.".format(
-            len(self.items), self.split))
+        print(
+            f"{len(self.items)} num images in GTA5 {self.split} set have been loaded."
+        )
 
     def __getitem__(self, item):
         idx = int(self.items[item])
@@ -107,8 +108,7 @@ class GTA5Dataset(CityDataset):
         gt_image = Image.open(gt_image_path)
 
         # Augmentation
-        if (self.split == "train" or self.split == "trainval" or
-                self.split == "all") and self.training:
+        if self.split in ["train", "trainval", "all"] and self.training:
             image, gt_image, edge_mask = self._train_sync_transform(image,
                                                                     gt_image)
         else:

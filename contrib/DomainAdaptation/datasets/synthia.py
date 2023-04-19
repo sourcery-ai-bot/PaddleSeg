@@ -57,7 +57,7 @@ class SYNTHIADataset(CityDataset):
         self.gaussian_blur = gaussian_blur
 
         # Files
-        item_list_filepath = os.path.join(self.list_path, self.split + ".txt")
+        item_list_filepath = os.path.join(self.list_path, f"{self.split}.txt")
         if not os.path.exists(item_list_filepath):
             raise Warning("split must be train/val/trainavl/test")
         self.image_filepath = os.path.join(self.data_path, "RGB")
@@ -92,8 +92,9 @@ class SYNTHIADataset(CityDataset):
         self.trainid_to_16id = {id: i for i, id in enumerate(synthia_set_16)}
         self.class_13 = False
 
-        print("{} num images in SYNTHIA {} set have been loaded.".format(
-            len(self.items), self.split))
+        print(
+            f"{len(self.items)} num images in SYNTHIA {self.split} set have been loaded."
+        )
 
     def __getitem__(self, item):
         id = int(self.items[item])
@@ -107,8 +108,7 @@ class SYNTHIADataset(CityDataset):
         gt_image = Image.fromarray(np.uint8(gt_image))
 
         # Augmentations
-        if (self.split == "train" or self.split == "trainval" or
-                self.split == "all") and self.training:
+        if self.split in ["train", "trainval", "all"] and self.training:
             image, gt_image = self._train_sync_transform(image, gt_image)
         else:
             image, gt_image = self._val_sync_transform(image, gt_image)

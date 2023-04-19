@@ -29,8 +29,8 @@ def check_logits_losses(logits_list, losses):
     len_losses = len(losses['types'])
     if len_logits != len_losses:
         raise RuntimeError(
-            'The length of logits_list should equal to the types of loss config: {} != {}.'
-            .format(len_logits, len_losses))
+            f'The length of logits_list should equal to the types of loss config: {len_logits} != {len_losses}.'
+        )
 
 
 def loss_computation(logits_list, labels, losses, edges=None):
@@ -47,8 +47,7 @@ def loss_computation(logits_list, labels, losses, edges=None):
             loss_list.append(coef_i * loss_i(logits, edges))
         elif loss_i.__class__.__name__ == 'MixedLoss':
             mixed_loss_list = loss_i(logits, labels)
-            for mixed_loss in mixed_loss_list:
-                loss_list.append(coef_i * mixed_loss)
+            loss_list.extend(coef_i * mixed_loss for mixed_loss in mixed_loss_list)
         elif loss_i.__class__.__name__ in ("KLLoss", ):
             loss_list.append(coef_i *
                              loss_i(logits_list[0], logits_list[1].detach()))
@@ -152,10 +151,7 @@ def train(model,
                        'shuffle') and iter % iters_per_epoch == 0:
                 train_dataset.shuffle()
 
-            if nranks > 1:
-                logits_list = ddp_model(images)
-            else:
-                logits_list = model(images)
+            logits_list = ddp_model(images) if nranks > 1 else model(images)
             loss_list = loss_computation(
                 logits_list=logits_list,
                 labels=labels,
@@ -198,9 +194,9 @@ def train(model,
                     if len(avg_loss_list) > 1:
                         avg_loss_dict = {}
                         for i, value in enumerate(avg_loss_list):
-                            avg_loss_dict['loss_' + str(i)] = value
+                            avg_loss_dict[f'loss_{str(i)}'] = value
                         for key, value in avg_loss_dict.items():
-                            log_tag = 'Train/' + key
+                            log_tag = f'Train/{key}'
                             log_writer.add_scalar(log_tag, value, iter)
 
                     log_writer.add_scalar('Train/lr', lr, iter)

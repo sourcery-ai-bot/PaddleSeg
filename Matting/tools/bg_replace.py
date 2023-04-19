@@ -93,8 +93,7 @@ def main(args):
 
     cfg = Config(args.cfg)
 
-    msg = '\n---------------Config Information---------------\n'
-    msg += str(cfg)
+    msg = '\n---------------Config Information---------------\n' + str(cfg)
     msg += '------------------------------------------------'
     logger.info(msg)
 
@@ -133,8 +132,7 @@ def get_bg(background, img_shape):
         bg[:, :, :] = 255
 
     elif not os.path.exists(background):
-        raise Exception('The --background is not existed: {}'.format(
-            background))
+        raise Exception(f'The --background is not existed: {background}')
     else:
         bg = cv2.imread(background)
         bg = cv2.resize(bg, (img_shape[1], img_shape[0]))

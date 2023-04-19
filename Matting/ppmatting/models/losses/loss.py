@@ -62,22 +62,20 @@ class GradientLoss(nn.Layer):
     def forward(self, logit, label, mask=None):
         if len(label.shape) == 3:
             label = label.unsqueeze(1)
-        if mask is not None:
-            if len(mask.shape) == 3:
-                mask = mask.unsqueeze(1)
-            logit = logit * mask
-            label = label * mask
-            loss = paddle.sum(
-                F.l1_loss(self.sobel(logit), self.sobel(label), 'none')) / (
-                    mask.sum() + self.eps)
-        else:
-            loss = F.l1_loss(self.sobel(logit), self.sobel(label), 'mean')
+        if mask is None:
+            return F.l1_loss(self.sobel(logit), self.sobel(label), 'mean')
 
-        return loss
+        if len(mask.shape) == 3:
+            mask = mask.unsqueeze(1)
+        logit = logit * mask
+        label = label * mask
+        return paddle.sum(
+            F.l1_loss(self.sobel(logit), self.sobel(label), 'none')
+        ) / (mask.sum() + self.eps)
 
     def sobel(self, input):
         """Using Sobel to compute gradient. Return the magnitude."""
-        if not len(input.shape) == 4:
+        if len(input.shape) != 4:
             raise ValueError("Invalid input shape, we expect NCHW, but it is ",
                              input.shape)
 
@@ -128,9 +126,7 @@ class LaplacianLoss(nn.Layer):
             label = label * mask
         pyr_label = self.laplacian_pyramid(label, self.gauss_kernel, 5)
         pyr_logit = self.laplacian_pyramid(logit, self.gauss_kernel, 5)
-        loss = sum(F.l1_loss(a, b) for a, b in zip(pyr_label, pyr_logit))
-
-        return loss
+        return sum(F.l1_loss(a, b) for a, b in zip(pyr_label, pyr_logit))
 
     def build_gauss_kernel(self, size=5, sigma=1.0, n_channels=1):
         if size % 2 != 1:
@@ -154,7 +150,7 @@ class LaplacianLoss(nn.Layer):
     def laplacian_pyramid(self, input, kernel, max_levels=5):
         current = input
         pyr = []
-        for level in range(max_levels):
+        for _ in range(max_levels):
             filtered = self.conv_gauss(current, kernel)
             diff = current - filtered
             pyr.append(diff)

@@ -43,15 +43,14 @@ class BaiduTranslate:
 
 
 # 获取所有可能带有ui的py文件
-ui_files = []
 widget_path = "eiseg/widget"
 widget_names = os.listdir(widget_path)
-for widget_name in widget_names:
-    if widget_name != "__init__.py" and widget_name != "__pycache__":
-        ui_files.append(osp.join(widget_path, widget_name))
-ui_files.append("eiseg/ui.py")
-ui_files.append("eiseg/app.py")
-
+ui_files = [
+    osp.join(widget_path, widget_name)
+    for widget_name in widget_names
+    if widget_name not in ["__init__.py", "__pycache__"]
+]
+ui_files.extend(("eiseg/ui.py", "eiseg/app.py"))
 # 查找
 chinese = []
 keys = "trans.put(\""
@@ -61,10 +60,8 @@ for ui_file in ui_files:
         sp_codes = codes.split(keys)
         if len(sp_codes) == 1:
             continue
-        else:
-            sp_codes.pop(0)
-            for sp_code in sp_codes:
-                chinese.append(sp_code.split("\")")[0])
+        sp_codes.pop(0)
+        chinese.extend(sp_code.split("\")")[0] for sp_code in sp_codes)
 chinese = list(set(chinese))
 # print(len(chinese))
 # print(chinese)
@@ -89,9 +86,9 @@ baidu_trans = BaiduTranslate("zh", "en")
 for cn in tqdm(chinese):
     if cn not in now_words.keys():
         en = baidu_trans.BdTrans(cn)
-        tr = cn + "@" + firstCharUpper(en[-1])  # 首字母大写
+        tr = f"{cn}@{firstCharUpper(en[-1])}"
     else:
-        tr = cn + "@" + now_words[cn]
+        tr = f"{cn}@{now_words[cn]}"
     translate.append(tr)
 
 # 保存翻译内容

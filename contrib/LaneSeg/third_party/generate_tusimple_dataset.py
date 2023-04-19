@@ -32,8 +32,6 @@ CLASS_NUMS = 7
 
 
 def generate_seg_label_image(label):
-    # this code copy from https://github.com/ZJULearning/resa/blob/main/tools/generate_seg_tusimple.py
-    lanes = []
     _lanes = []
     slope = []  # identify 0th, 1st, 2nd, 3rd, 4th, 5th lane through slope
     for i in range(len(label['lanes'])):
@@ -47,7 +45,7 @@ def generate_seg_label_image(label):
     _lanes = [_lanes[i] for i in np.argsort(slope)]
     slope = [slope[i] for i in np.argsort(slope)]
 
-    idx = [None for i in range(CLASS_NUMS - 1)]
+    idx = [None for _ in range(CLASS_NUMS - 1)]
     for i in range(len(slope)):
         if slope[i] <= 90:
             idx[2] = i
@@ -58,9 +56,9 @@ def generate_seg_label_image(label):
             idx[4] = i + 1 if i + 1 < len(slope) else None
             idx[5] = i + 2 if i + 2 < len(slope) else None
             break
-    for i in range(CLASS_NUMS - 1):
-        lanes.append([] if idx[i] is None else _lanes[idx[i]])
-
+    lanes = [
+        [] if idx[i] is None else _lanes[idx[i]] for i in range(CLASS_NUMS - 1)
+    ]
     seg_img = np.zeros([Image_Height, Image_Width], np.uint8)
 
     for i in range(len(lanes)):
@@ -76,9 +74,8 @@ def generate_seg_label_image(label):
 
 def generate_labels(args, src_dir, label_dir, image_set, mode):
     os.makedirs(os.path.join(args.root, src_dir, label_dir), exist_ok=True)
-    label_file = open(
-        os.path.join(args.root, src_dir, "{}_list.txt".format(mode)), "w")
-    for json_name in (image_set):
+    label_file = open(os.path.join(args.root, src_dir, f"{mode}_list.txt"), "w")
+    for json_name in image_set:
         with open(os.path.join(args.root, src_dir, json_name)) as jsonfile:
             for jsonline in jsonfile:
                 label = json.loads(jsonline)
@@ -89,18 +86,22 @@ def generate_labels(args, src_dir, label_dir, image_set, mode):
                                                   seg_path[1],
                                                   seg_path[2]), seg_path[3]
                 os.makedirs(seg_path, exist_ok=True)
-                seg_path = os.path.join(seg_path, img_name[:-3] + "png")
+                seg_path = os.path.join(seg_path, f"{img_name[:-3]}png")
                 cv2.imwrite(seg_path, seg_img)
 
                 img_path = "/".join([src_dir, img_path])
-                seg_path = "/".join([
-                    src_dir, label_dir, *img_path.split("/")[2:4],
-                    img_name[:-3] + "png"
-                ])
+                seg_path = "/".join(
+                    [
+                        src_dir,
+                        label_dir,
+                        *img_path.split("/")[2:4],
+                        f"{img_name[:-3]}png",
+                    ]
+                )
                 if seg_path[0] != '/':
-                    seg_path = '/' + seg_path
+                    seg_path = f'/{seg_path}'
                 if img_path[0] != '/':
-                    img_path = '/' + img_path
+                    img_path = f'/{img_path}'
 
                 label_str = []
                 label_str.insert(0, seg_path)

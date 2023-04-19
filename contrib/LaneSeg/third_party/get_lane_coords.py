@@ -65,7 +65,7 @@ class LaneProcessor:
                     if x < 0 and lane[i + 1] > 0
                 ]
                 gap_id = [i for i, x in enumerate(lane) if x < 0]
-                if len(gap_start) == 0 or len(gap_end) == 0:
+                if not gap_start or not gap_end:
                     return coordinate
                 for id in gap_id:
                     for i in range(len(gap_start)):
@@ -77,7 +77,7 @@ class LaneProcessor:
                             lane[id] = int((id - gap_start[
                                 i]) / gap_width * lane[gap_end[i]] + (gap_end[
                                     i] - id) / gap_width * lane[gap_start[i]])
-                if not all(x > 0 for x in lane):
+                if any(x <= 0 for x in lane):
                     print("Gaps still exist!")
                 coordinate[start:end + 1] = lane
         return coordinate
@@ -104,9 +104,9 @@ class LaneProcessor:
         return coords
 
     def fix_outliers(self, coords):
-        data = [x for i, x in enumerate(coords) if x > 0]
+        data = [x for x in coords if x > 0]
         index = [i for i, x in enumerate(coords) if x > 0]
-        if len(data) == 0:
+        if not data:
             return coords
         diff = []
         is_outlier = False
@@ -136,12 +136,10 @@ class LaneProcessor:
                 heat_map = cv2.blur(
                     heat_map, (9, 9), borderType=cv2.BORDER_REPLICATE)
             coords = self.get_coords(heat_map)
-            indexes = [i for i, x in enumerate(coords) if x > 0]
-            if not indexes:
-                continue
-            self.add_coords(coordinates, coords)
+            if indexes := [i for i, x in enumerate(coords) if x > 0]:
+                self.add_coords(coordinates, coords)
 
-        if len(coordinates) == 0:
+        if not coordinates:
             coords = np.zeros(self.points_nums)
             self.add_coords(coordinates, coords)
         return coordinates

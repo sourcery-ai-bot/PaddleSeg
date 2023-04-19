@@ -38,13 +38,11 @@ def _segMaskB2I(mask_path, save_path):
     cv2_v = cv2.__version__.split(".")[0]
     contours = results[1] if cv2_v == "3" else results[0]  # 边界
     hierarchys = results[2] if cv2_v == "3" else results[1]  # 隶属信息
-    areas = {}  # 面积
-    for i in range(len(contours)):
-        areas[i] = cv2.contourArea(contours[i])
+    areas = {i: cv2.contourArea(contours[i]) for i in range(len(contours))}
     sorted(areas.items(), key=lambda kv: (kv[1], kv[0]), reverse=True)  # 面积升序
     # 开始填充
     color = 1
-    for idx in areas.keys():
+    for idx in areas:
         contour = contours[idx]
         hierarchy = hierarchys[0][idx]
         # print(hierarchy)

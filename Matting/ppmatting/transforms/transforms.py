@@ -73,9 +73,8 @@ class LoadImages:
             if isinstance(data[key], str):
                 data[key] = cv2.imread(data[key], cv2.IMREAD_UNCHANGED)
             # if alpha and trimap has 3 channels, extract one.
-            if key in ['alpha', 'trimap']:
-                if len(data[key].shape) > 2:
-                    data[key] = data[key][:, :, 0]
+            if key in ['alpha', 'trimap'] and len(data[key].shape) > 2:
+                data[key] = data[key][:, :, 0]
 
         if self.to_rgb:
             data['img'] = cv2.cvtColor(data['img'], cv2.COLOR_BGR2RGB)
@@ -90,16 +89,15 @@ class LoadImages:
 @manager.TRANSFORMS.add_component
 class Resize:
     def __init__(self, target_size=(512, 512), random_interp=False):
-        if isinstance(target_size, list) or isinstance(target_size, tuple):
-            if len(target_size) != 2:
-                raise ValueError(
-                    '`target_size` should include 2 elements, but it is {}'.
-                    format(target_size))
-        else:
+        if not isinstance(target_size, (list, tuple)):
             raise TypeError(
-                "Type of `target_size` is invalid. It should be list or tuple, but it is {}"
-                .format(type(target_size)))
+                f"Type of `target_size` is invalid. It should be list or tuple, but it is {type(target_size)}"
+            )
 
+        if len(target_size) != 2:
+            raise ValueError(
+                f'`target_size` should include 2 elements, but it is {target_size}'
+            )
         self.target_size = target_size
         self.random_interp = random_interp
         self.interps = [cv2.INTER_NEAREST, cv2.INTER_LINEAR, cv2.INTER_CUBIC]
@@ -109,7 +107,7 @@ class Resize:
             interp = np.random.choice(self.interps)
         else:
             interp = cv2.INTER_LINEAR
-        data['trans_info'].append(('resize', data['img'].shape[0:2]))
+        data['trans_info'].append(('resize', data['img'].shape[:2]))
         data['img'] = functional.resize(data['img'], self.target_size, interp)
         for key in data.get('gt_fields', []):
             if key == 'trimap':
@@ -132,26 +130,21 @@ class RandomResize:
     """
 
     def __init__(self, size=None, scale=None):
-        if isinstance(size, list) or isinstance(size, tuple):
+        if isinstance(size, (list, tuple)):
             if len(size) != 2:
-                raise ValueError(
-                    '`size` should include 2 elements, but it is {}'.format(
-                        size))
+                raise ValueError(f'`size` should include 2 elements, but it is {size}')
         elif size is not None:
             raise TypeError(
-                "Type of `size` is invalid. It should be list or tuple, but it is {}"
-                .format(type(size)))
+                f"Type of `size` is invalid. It should be list or tuple, but it is {type(size)}"
+            )
 
         if scale is not None:
-            if isinstance(scale, list) or isinstance(scale, tuple):
-                if len(scale) != 2:
-                    raise ValueError(
-                        '`scale` should include 2 elements, but it is {}'.
-                        format(scale))
-            else:
+            if not isinstance(scale, (list, tuple)):
                 raise TypeError(
-                    "Type of `scale` is invalid. It should be list or tuple, but it is {}"
-                    .format(type(scale)))
+                    f"Type of `scale` is invalid. It should be list or tuple, but it is {type(scale)}"
+                )
+            if len(scale) != 2:
+                raise ValueError(f'`scale` should include 2 elements, but it is {scale}')
         self.size = size
         self.scale = scale
 
@@ -192,7 +185,7 @@ class ResizeByLong:
         self.long_size = long_size
 
     def __call__(self, data):
-        data['trans_info'].append(('resize', data['img'].shape[0:2]))
+        data['trans_info'].append(('resize', data['img'].shape[:2]))
         data['img'] = functional.resize_long(data['img'], self.long_size)
         for key in data.get('gt_fields', []):
             if key == 'trimap':
@@ -216,7 +209,7 @@ class ResizeByShort:
         self.short_size = short_size
 
     def __call__(self, data):
-        data['trans_info'].append(('resize', data['img'].shape[0:2]))
+        data['trans_info'].append(('resize', data['img'].shape[:2]))
         data['img'] = functional.resize_short(data['img'], self.short_size)
         for key in data.get('gt_fields', []):
             if key == 'trimap':
@@ -237,9 +230,9 @@ class ResizeToIntMult:
         self.mult_int = mult_int
 
     def __call__(self, data):
-        data['trans_info'].append(('resize', data['img'].shape[0:2]))
+        data['trans_info'].append(('resize', data['img'].shape[:2]))
 
-        h, w = data['img'].shape[0:2]
+        h, w = data['img'].shape[:2]
         rw = w - w % self.mult_int
         rh = h - h % self.mult_int
         data['img'] = functional.resize(data['img'], (rw, rh))
@@ -272,12 +265,10 @@ class Normalize:
         if not (isinstance(self.mean,
                            (list, tuple)) and isinstance(self.std,
                                                          (list, tuple))):
-            raise ValueError(
-                "{}: input type is invalid. It should be list or tuple".format(
-                    self))
+            raise ValueError(f"{self}: input type is invalid. It should be list or tuple")
         from functools import reduce
         if reduce(lambda x, y: x * y, self.std) == 0:
-            raise ValueError('{}: std is invalid!'.format(self))
+            raise ValueError(f'{self}: std is invalid!')
 
     def __call__(self, data):
         mean = np.array(self.mean)[np.newaxis, np.newaxis, :]
@@ -326,13 +317,8 @@ class RandomCropByAlpha:
             start_h = max(0, center_h - delta_h)
             start_w = max(0, center_w - delta_w)
         else:
-            start_h = 0
-            start_w = 0
-            if img_h > crop_h:
-                start_h = np.random.randint(img_h - crop_h + 1)
-            if img_w > crop_w:
-                start_w = np.random.randint(img_w - crop_w + 1)
-
+            start_h = np.random.randint(img_h - crop_h + 1) if img_h > crop_h else 0
+            start_w = np.random.randint(img_w - crop_w + 1) if img_w > crop_w else 0
         end_h = min(img_h, start_h + crop_h)
         end_w = min(img_w, start_w + crop_w)
 
@@ -360,15 +346,10 @@ class RandomCrop:
     def __call__(self, data):
         idex = np.random.randint(low=0, high=len(self.crop_size))
         crop_w, crop_h = self.crop_size[idex]
-        img_h, img_w = data['img'].shape[0:2]
+        img_h, img_w = data['img'].shape[:2]
 
-        start_h = 0
-        start_w = 0
-        if img_h > crop_h:
-            start_h = np.random.randint(img_h - crop_h + 1)
-        if img_w > crop_w:
-            start_w = np.random.randint(img_w - crop_w + 1)
-
+        start_h = np.random.randint(img_h - crop_h + 1) if img_h > crop_h else 0
+        start_w = np.random.randint(img_w - crop_w + 1) if img_w > crop_w else 0
         end_h = min(img_h, start_h + crop_h)
         end_w = min(img_w, start_w + crop_w)
 
@@ -398,21 +379,22 @@ class LimitLong:
     """
 
     def __init__(self, max_long=None, min_long=None):
-        if max_long is not None:
-            if not isinstance(max_long, int):
-                raise TypeError(
-                    "Type of `max_long` is invalid. It should be int, but it is {}"
-                    .format(type(max_long)))
-        if min_long is not None:
-            if not isinstance(min_long, int):
-                raise TypeError(
-                    "Type of `min_long` is invalid. It should be int, but it is {}"
-                    .format(type(min_long)))
-        if (max_long is not None) and (min_long is not None):
-            if min_long > max_long:
-                raise ValueError(
-                    '`max_long should not smaller than min_long, but they are {} and {}'
-                    .format(max_long, min_long))
+        if max_long is not None and not isinstance(max_long, int):
+            raise TypeError(
+                f"Type of `max_long` is invalid. It should be int, but it is {type(max_long)}"
+            )
+        if min_long is not None and not isinstance(min_long, int):
+            raise TypeError(
+                f"Type of `min_long` is invalid. It should be int, but it is {type(min_long)}"
+            )
+        if (
+            (max_long is not None)
+            and (min_long is not None)
+            and min_long > max_long
+        ):
+            raise ValueError(
+                f'`max_long should not smaller than min_long, but they are {max_long} and {min_long}'
+            )
         self.max_long = max_long
         self.min_long = min_long
 
@@ -425,7 +407,7 @@ class LimitLong:
         elif (self.min_long is not None) and (long_edge < self.min_long):
             target = self.min_long
 
-        data['trans_info'].append(('resize', data['img'].shape[0:2]))
+        data['trans_info'].append(('resize', data['img'].shape[:2]))
         if target != long_edge:
             data['img'] = functional.resize_long(data['img'], target)
             for key in data.get('gt_fields', []):
@@ -457,21 +439,22 @@ class LimitShort:
     """
 
     def __init__(self, max_short=None, min_short=None):
-        if max_short is not None:
-            if not isinstance(max_short, int):
-                raise TypeError(
-                    "Type of `max_short` is invalid. It should be int, but it is {}"
-                    .format(type(max_short)))
-        if min_short is not None:
-            if not isinstance(min_short, int):
-                raise TypeError(
-                    "Type of `min_short` is invalid. It should be int, but it is {}"
-                    .format(type(min_short)))
-        if (max_short is not None) and (min_short is not None):
-            if min_short > max_short:
-                raise ValueError(
-                    '`max_short should not smaller than min_short, but they are {} and {}'
-                    .format(max_short, min_short))
+        if max_short is not None and not isinstance(max_short, int):
+            raise TypeError(
+                f"Type of `max_short` is invalid. It should be int, but it is {type(max_short)}"
+            )
+        if min_short is not None and not isinstance(min_short, int):
+            raise TypeError(
+                f"Type of `min_short` is invalid. It should be int, but it is {type(min_short)}"
+            )
+        if (
+            (max_short is not None)
+            and (min_short is not None)
+            and min_short > max_short
+        ):
+            raise ValueError(
+                f'`max_short should not smaller than min_short, but they are {max_short} and {min_short}'
+            )
         self.max_short = max_short
         self.min_short = min_short
 
@@ -484,7 +467,7 @@ class LimitShort:
         elif (self.min_short is not None) and (short_edge < self.min_short):
             target = self.min_short
 
-        data['trans_info'].append(('resize', data['img'].shape[0:2]))
+        data['trans_info'].append(('resize', data['img'].shape[:2]))
         if target != short_edge:
             data['img'] = functional.resize_short(data['img'], target)
             for key in data.get('gt_fields', []):
@@ -537,20 +520,18 @@ class RandomBlur:
             n = 1
         else:
             n = int(1.0 / self.prob)
-        if n > 0:
-            if np.random.randint(0, n) == 0:
-                radius = np.random.randint(3, 10)
-                if radius % 2 != 1:
-                    radius = radius + 1
-                if radius > 9:
-                    radius = 9
-                data['img'] = cv2.GaussianBlur(data['img'], (radius, radius), 0,
-                                               0)
-                for key in data.get('gt_fields', []):
-                    if key == 'trimap':
-                        continue
-                    data[key] = cv2.GaussianBlur(data[key], (radius, radius), 0,
-                                                 0)
+        if n > 0 and np.random.randint(0, n) == 0:
+            radius = np.random.randint(3, 10)
+            if radius % 2 != 1:
+                radius = radius + 1
+            radius = min(radius, 9)
+            data['img'] = cv2.GaussianBlur(data['img'], (radius, radius), 0,
+                                           0)
+            for key in data.get('gt_fields', []):
+                if key == 'trimap':
+                    continue
+                data[key] = cv2.GaussianBlur(data[key], (radius, radius), 0,
+                                             0)
         return data
 
 
@@ -629,27 +610,26 @@ class RandomDistort:
 
         im = data['img'].astype('uint8')
         im = Image.fromarray(im)
-        for id in range(len(ops)):
-            params = params_dict[ops[id].__name__]
+        for op in ops:
+            params = params_dict[op.__name__]
             params['im'] = im
-            prob = prob_dict[ops[id].__name__]
+            prob = prob_dict[op.__name__]
             if np.random.uniform(0, 1) < prob:
-                im = ops[id](**params)
+                im = op(**params)
         data['img'] = np.asarray(im)
 
         for key in data.get('gt_fields', []):
             if key in ['alpha', 'trimap']:
                 continue
-            else:
-                im = data[key].astype('uint8')
-                im = Image.fromarray(im)
-                for id in range(len(ops)):
-                    params = params_dict[ops[id].__name__]
-                    params['im'] = im
-                    prob = prob_dict[ops[id].__name__]
-                    if np.random.uniform(0, 1) < prob:
-                        im = ops[id](**params)
-                data[key] = np.asarray(im)
+            im = data[key].astype('uint8')
+            im = Image.fromarray(im)
+            for op_ in ops:
+                params = params_dict[op_.__name__]
+                params['im'] = im
+                prob = prob_dict[op_.__name__]
+                if np.random.uniform(0, 1) < prob:
+                    im = op_(**params)
+            data[key] = np.asarray(im)
         return data
 
 
@@ -670,16 +650,15 @@ class Padding:
     """
 
     def __init__(self, target_size, im_padding_value=(127.5, 127.5, 127.5)):
-        if isinstance(target_size, list) or isinstance(target_size, tuple):
-            if len(target_size) != 2:
-                raise ValueError(
-                    '`target_size` should include 2 elements, but it is {}'.
-                    format(target_size))
-        else:
+        if not isinstance(target_size, (list, tuple)):
             raise TypeError(
-                "Type of target_size is invalid. It should be list or tuple, now is {}"
-                .format(type(target_size)))
+                f"Type of target_size is invalid. It should be list or tuple, now is {type(target_size)}"
+            )
 
+        if len(target_size) != 2:
+            raise ValueError(
+                f'`target_size` should include 2 elements, but it is {target_size}'
+            )
         self.target_size = target_size
         self.im_padding_value = im_padding_value
 
@@ -689,31 +668,27 @@ class Padding:
         target_width = self.target_size[0]
         pad_height = max(0, target_height - im_height)
         pad_width = max(0, target_width - im_width)
-        data['trans_info'].append(('padding', data['img'].shape[0:2]))
+        data['trans_info'].append(('padding', data['img'].shape[:2]))
         if (pad_height == 0) and (pad_width == 0):
             return data
-        else:
-            data['img'] = cv2.copyMakeBorder(
-                data['img'],
+        data['img'] = cv2.copyMakeBorder(
+            data['img'],
+            0,
+            pad_height,
+            0,
+            pad_width,
+            cv2.BORDER_CONSTANT,
+            value=self.im_padding_value)
+        for key in data.get('gt_fields', []):
+            value = 0 if key in ['trimap', 'alpha'] else self.im_padding_value
+            data[key] = cv2.copyMakeBorder(
+                data[key],
                 0,
                 pad_height,
                 0,
                 pad_width,
                 cv2.BORDER_CONSTANT,
-                value=self.im_padding_value)
-            for key in data.get('gt_fields', []):
-                if key in ['trimap', 'alpha']:
-                    value = 0
-                else:
-                    value = self.im_padding_value
-                data[key] = cv2.copyMakeBorder(
-                    data[key],
-                    0,
-                    pad_height,
-                    0,
-                    pad_width,
-                    cv2.BORDER_CONSTANT,
-                    value=value)
+                value=value)
         return data
 
 
@@ -736,7 +711,7 @@ class RandomSharpen:
         blur_img = cv2.GaussianBlur(data['img'], (radius, radius), 5)
         data['img'] = cv2.addWeighted(data['img'], 1 + w, blur_img, -w, 0)
         for key in data.get('gt_fields', []):
-            if key == 'trimap' or key == 'alpha':
+            if key in ['trimap', 'alpha']:
                 continue
             blur_img = cv2.GaussianBlur(data[key], (0, 0), 5)
             data[key] = cv2.addWeighted(data[key], 1.5, blur_img, -0.5, 0)
@@ -783,7 +758,7 @@ class RandomReJpeg:
         img = data['img'].astype('uint8')
 
         # Ensure no conflicts between processes
-        tmp_name = str(os.getpid()) + '.jpg'
+        tmp_name = f'{os.getpid()}.jpg'
         tmp_name = os.path.join(seg_env.TMP_HOME, tmp_name)
         cv2.imwrite(tmp_name, img, [int(cv2.IMWRITE_JPEG_QUALITY), q])
         data['img'] = cv2.imread(tmp_name)

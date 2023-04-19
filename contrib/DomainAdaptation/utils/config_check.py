@@ -44,14 +44,14 @@ def num_classes_check(cfg, train_dataset, val_dataset):
         raise ValueError(
             'One of `train_dataset` or `val_dataset should be given, but there are none.'
         )
-    if len(num_classes_set) == 0:
+    if not num_classes_set:
         raise ValueError(
             '`num_classes` is not found. Please set it in model, train_dataset or val_dataset'
         )
     elif len(num_classes_set) > 1:
         raise ValueError(
-            '`num_classes` is not consistent: {}. Please set it consistently in model or train_dataset or val_dataset'
-            .format(num_classes_set))
+            f'`num_classes` is not consistent: {num_classes_set}. Please set it consistently in model or train_dataset or val_dataset'
+        )
     else:
         num_classes = num_classes_set.pop()
         if train_dataset:

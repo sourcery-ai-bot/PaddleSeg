@@ -13,7 +13,7 @@ def serialize(init):
         for pname, value in zip(parameters[1:], args):
             params[pname] = value
 
-        config = {"class": get_classname(self.__class__), "params": dict()}
+        config = {"class": get_classname(self.__class__), "params": {}}
         specified_params = set(params.keys())
 
         for pname, param in get_default_params(self.__class__).items():
@@ -42,7 +42,7 @@ def load_model(config, **kwargs):
     model_class = get_class_from_str(config["class"])
     model_default_params = get_default_params(model_class)
 
-    model_args = dict()
+    model_args = {}
     for pname, param in config["params"].items():
         value = param["value"]
         if param["type"] == "class":
@@ -57,7 +57,7 @@ def load_model(config, **kwargs):
             continue
         model_args[pname] = value
 
-    model_args.update(kwargs)
+    model_args |= kwargs
 
     return model_class(**model_args)
 
@@ -76,7 +76,7 @@ def get_config_repr(config):
 
 
 def get_default_params(some_class):
-    params = dict()
+    params = {}
     for mclass in some_class.mro():
         if mclass is nn.Layer or mclass is object:
             continue
@@ -93,7 +93,7 @@ def get_classname(cls):
     module = cls.__module__
     name = cls.__qualname__
     if module is not None and module != "__builtin__":
-        name = module + "." + name
+        name = f"{module}.{name}"
     return name
 
 

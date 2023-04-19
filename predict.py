@@ -158,15 +158,14 @@ def main(args):
 
     cfg = Config(args.cfg)
 
-    msg = '\n---------------Config Information---------------\n'
-    msg += str(cfg)
+    msg = '\n---------------Config Information---------------\n' + str(cfg)
     msg += '------------------------------------------------'
     logger.info(msg)
 
     model = cfg.model
     transforms = Compose(cfg.val_transforms)
     image_list, image_dir = get_image_list(args.image_path)
-    logger.info('Number of predict images = {}'.format(len(image_list)))
+    logger.info(f'Number of predict images = {len(image_list)}')
 
     test_config = get_test_config(cfg, args)
 

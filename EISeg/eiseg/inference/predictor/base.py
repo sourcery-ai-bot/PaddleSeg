@@ -60,11 +60,9 @@ class BasePredictor(object):
             norm_radius=5, spatial_scale=1.0, cpu_mode=False, use_disks=True)
 
     def to_tensor(self, x):
-        if isinstance(x, np.ndarray):
-            if x.ndim == 2:
-                x = x[:, :, None]
-        img = paddle.to_tensor(x.transpose([2, 0, 1])).astype("float32") / 255
-        return img
+        if isinstance(x, np.ndarray) and x.ndim == 2:
+            x = x[:, :, None]
+        return paddle.to_tensor(x.transpose([2, 0, 1])).astype("float32") / 255
 
     def set_input_image(self, image):
         image_nd = self.to_tensor(image)
@@ -84,12 +82,7 @@ class BasePredictor(object):
 
         input_image = self.original_image
         if prev_mask is None:
-            if not self.with_prev_mask:
-
-                prev_mask = self.prev_edge
-            else:
-                prev_mask = self.prev_prediction
-
+            prev_mask = self.prev_prediction if self.with_prev_mask else self.prev_edge
         input_image = paddle.concat([input_image, prev_mask], axis=1)
 
         image_nd, clicks_lists, is_image_changed = self.apply_transforms(
@@ -205,17 +198,13 @@ class BasePredictor(object):
                 click.coords_and_indx for click in clicks_list
                 if click.is_positive
             ]
-            pos_clicks = pos_clicks + (num_max_points - len(pos_clicks)) * [
-                (-1, -1, -1)
-            ]
+            pos_clicks += (num_max_points - len(pos_clicks)) * [(-1, -1, -1)]
 
             neg_clicks = [
                 click.coords_and_indx for click in clicks_list
                 if not click.is_positive
             ]
-            neg_clicks = neg_clicks + (num_max_points - len(neg_clicks)) * [
-                (-1, -1, -1)
-            ]
+            neg_clicks += (num_max_points - len(neg_clicks)) * [(-1, -1, -1)]
             total_clicks.append(pos_clicks + neg_clicks)
 
         return paddle.to_tensor(total_clicks)

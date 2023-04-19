@@ -15,20 +15,17 @@ def video_cut(video_path, save_path, cut_length):
     flag = 0
     success, bgr_image = video_capture.read()
     fourcc = cv2.VideoWriter_fourcc('m', 'p', '4', 'v')
-    final_path = os.path.join(save_path,
-                              str(frame_index // cut_length) + '.mp4')
+    final_path = os.path.join(save_path, f'{str(frame_index // cut_length)}.mp4')
     v = cv2.VideoWriter(final_path, fourcc, fps, size)
     while success:
         if v.isOpened():
             v.write(bgr_image)
 
-        if frame_index == cut_length * flag + cut_length:
-            if v.isOpened():
-                v.release()
+        if frame_index == cut_length * flag + cut_length and v.isOpened():
+            v.release()
 
         if frame_index == cut_length * flag:
-            final_path = os.path.join(save_path,
-                                      str(frame_index // cut_length) + '.mp4')
+            final_path = os.path.join(save_path, f'{str(frame_index // cut_length)}.mp4')
             v = cv2.VideoWriter(final_path, fourcc, fps, size)
             flag += 1
         success, bgr_image = video_capture.read()

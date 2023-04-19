@@ -218,7 +218,7 @@ def auto_tune(args, imgs, img_nums):
     input_names = predictor.get_input_names()
     input_handle = predictor.get_input_handle(input_names[0])
 
-    for i in range(0, num):
+    for i in range(num):
         data = np.array([cfg.transforms(imgs[i])[0]])
         input_handle.reshape(data.shape)
         input_handle.copy_from_cpu(data)
@@ -318,15 +318,15 @@ class Predictor:
         """
         logger.info("Use GPU")
         self.pred_cfg.enable_use_gpu(100, 0)
-        precision_map = {
-            "fp16": PrecisionType.Half,
-            "fp32": PrecisionType.Float32,
-            "int8": PrecisionType.Int8
-        }
-        precision_mode = precision_map[self.args.precision]
-
         if self.args.use_trt:
             logger.info("Use TRT")
+            precision_map = {
+                "fp16": PrecisionType.Half,
+                "fp32": PrecisionType.Float32,
+                "int8": PrecisionType.Int8
+            }
+            precision_mode = precision_map[self.args.precision]
+
             self.pred_cfg.enable_tensorrt_engine(
                 workspace_size=1 << 30,
                 max_batch_size=1,
@@ -336,7 +336,7 @@ class Predictor:
                 use_calib_mode=False)
 
             if use_auto_tune(self.args) and \
-                    os.path.exists(self.args.auto_tuned_shape_file):
+                        os.path.exists(self.args.auto_tuned_shape_file):
                 logger.info("Use auto tuned dynamic shape")
                 allow_build_at_runtime = True
                 self.pred_cfg.enable_tuned_tensorrt_dynamic_shape(
@@ -365,19 +365,14 @@ class Predictor:
 
         for i in range(0, len(imgs_path), args.batch_size):
 
-            if args.use_warmup:
-                # warm up
-                if i == 0 and args.benchmark:
-                    for j in range(5):
-                        data = np.array([
-                            self._preprocess(img)  # load from original
-                            for img in imgs_path[0:args.batch_size]
-                        ])
-                        input_handle.reshape(data.shape)
-                        input_handle.copy_from_cpu(data)
-                        self.predictor.run()
-                        results = output_handle.copy_to_cpu()
-                        results = self._postprocess(results)
+            if args.use_warmup and i == 0 and args.benchmark:
+                for _ in range(5):
+                    data = np.array([self._preprocess(img) for img in imgs_path[:args.batch_size]])
+                    input_handle.reshape(data.shape)
+                    input_handle.copy_from_cpu(data)
+                    self.predictor.run()
+                    results = output_handle.copy_to_cpu()
+                    results = self._postprocess(results)
 
             # inference
             if args.benchmark:
@@ -427,11 +422,11 @@ class Predictor:
         Args:
         Img(str): A batch of image path
         """
-        if not "npy" in img:
+        if "npy" not in img:
             image_files = get_image_list(img, None, None)
             warnings.warn(
-                "The image path is {}, please make sure this is the images you want to infer".
-                format(image_files))
+                f"The image path is {image_files}, please make sure this is the images you want to infer"
+            )
             savepath = os.path.dirname(img)
             pre = [
                 HUnorm,

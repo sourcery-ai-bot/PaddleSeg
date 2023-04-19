@@ -40,30 +40,29 @@ if check_gdal():
 
 # 保存shp文件
 def save_shp(shp_path: str, tif_path: str, ignore_index: int=0) -> str:
-    if IMPORT_STATE == True:
-        ds = gdal.Open(tif_path)
-        srcband = ds.GetRasterBand(1)
-        maskband = srcband.GetMaskBand()
-        gdal.SetConfigOption("GDAL_FILENAME_IS_UTF8", "YES")
-        gdal.SetConfigOption("SHAPE_ENCODING", "UTF-8")
-        ogr.RegisterAll()
-        drv = ogr.GetDriverByName("ESRI Shapefile")
-        if osp.exists(shp_path):
-            os.remove(shp_path)
-        dst_ds = drv.CreateDataSource(shp_path)
-        prosrs = osr.SpatialReference(wkt=ds.GetProjection())
-        dst_layer = dst_ds.CreateLayer(
-            "segmentation", geom_type=ogr.wkbPolygon, srs=prosrs)
-        dst_fieldname = "DN"
-        fd = ogr.FieldDefn(dst_fieldname, ogr.OFTInteger)
-        dst_layer.CreateField(fd)
-        gdal.Polygonize(srcband, maskband, dst_layer, 0, [])
-        lyr = dst_ds.GetLayer()
-        lyr.SetAttributeFilter("DN = '{}'".format(str(ignore_index)))
-        for holes in lyr:
-            lyr.DeleteFeature(holes.GetFID())
-        dst_ds.Destroy()
-        ds = None
-        return "Dataset creation successfully!"
-    else:
+    if IMPORT_STATE != True:
         raise ImportError("can't import gdal, osr, ogr!")
+    ds = gdal.Open(tif_path)
+    srcband = ds.GetRasterBand(1)
+    maskband = srcband.GetMaskBand()
+    gdal.SetConfigOption("GDAL_FILENAME_IS_UTF8", "YES")
+    gdal.SetConfigOption("SHAPE_ENCODING", "UTF-8")
+    ogr.RegisterAll()
+    drv = ogr.GetDriverByName("ESRI Shapefile")
+    if osp.exists(shp_path):
+        os.remove(shp_path)
+    dst_ds = drv.CreateDataSource(shp_path)
+    prosrs = osr.SpatialReference(wkt=ds.GetProjection())
+    dst_layer = dst_ds.CreateLayer(
+        "segmentation", geom_type=ogr.wkbPolygon, srs=prosrs)
+    dst_fieldname = "DN"
+    fd = ogr.FieldDefn(dst_fieldname, ogr.OFTInteger)
+    dst_layer.CreateField(fd)
+    gdal.Polygonize(srcband, maskband, dst_layer, 0, [])
+    lyr = dst_ds.GetLayer()
+    lyr.SetAttributeFilter(f"DN = '{ignore_index}'")
+    for holes in lyr:
+        lyr.DeleteFeature(holes.GetFID())
+    dst_ds.Destroy()
+    ds = None
+    return "Dataset creation successfully!"

@@ -65,11 +65,7 @@ def main(args):
         net.set_dict(para_state_dict)
         logger.info('Loaded trained params of model successfully.')
 
-    if args.input_shape is None:
-        shape = [None, 3, None, None]
-    else:
-        shape = args.input_shape
-
+    shape = [None, 3, None, None] if args.input_shape is None else args.input_shape
     new_net = net
     new_net.eval()
     new_net = paddle.jit.to_static(

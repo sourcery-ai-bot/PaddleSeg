@@ -103,7 +103,4 @@ class LabelList(object):
 
     @property
     def colors(self):
-        cols = []
-        for lab in self.labelList:
-            cols.append(lab.color)
-        return cols
+        return [lab.color for lab in self.labelList]

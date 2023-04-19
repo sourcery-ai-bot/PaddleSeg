@@ -37,9 +37,7 @@ class BaiduTranslate:
         md = hashlib.md5()
         md.update(sign.encode(encoding="utf-8"))
         sign = md.hexdigest()
-        myurl = (self.url + "?appid=" + self.appid + "&q=" + parse.quote(text) +
-                 "&from=" + self.fromLang + "&to=" + self.toLang + "&salt=" +
-                 str(self.salt) + "&sign=" + sign)
+        myurl = f"{self.url}?appid={self.appid}&q={parse.quote(text)}&from={self.fromLang}&to={self.toLang}&salt={str(self.salt)}&sign={sign}"
         try:
             httpClient = http.client.HTTPConnection("api.fanyi.baidu.com")
             httpClient.request("GET", myurl)

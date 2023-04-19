@@ -23,8 +23,7 @@ import math
 
 # 计算两点距离
 def cal_dist(point_1, point_2):
-    dist = np.sqrt(np.sum(np.power((point_1 - point_2), 2)))
-    return dist
+    return np.sqrt(np.sum(np.power((point_1 - point_2), 2)))
 
 
 # 计算两条线的夹角

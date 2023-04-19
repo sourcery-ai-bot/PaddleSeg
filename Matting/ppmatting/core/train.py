@@ -57,7 +57,7 @@ def visual_in_traning(log_writer, vis_dict, step):
 def save_best(best_model_dir, metrics_data, iter):
     with open(os.path.join(best_model_dir, 'best_metrics.txt'), 'w') as f:
         for key, value in metrics_data.items():
-            line = key + ' ' + str(value) + '\n'
+            line = f'{key} {str(value)}' + '\n'
             f.write(line)
         f.write('iter' + ' ' + str(iter) + '\n')
 
@@ -138,10 +138,7 @@ def train(model,
         if not paddle.distributed.parallel.parallel_helper._is_parallel_ctx_initialized(
         ):
             paddle.distributed.init_parallel_env()
-            ddp_model = paddle.DataParallel(model)
-        else:
-            ddp_model = paddle.DataParallel(model)
-
+        ddp_model = paddle.DataParallel(model)
     batch_sampler = paddle.io.DistributedBatchSampler(
         train_dataset, batch_size=batch_size, shuffle=True, drop_last=True)
 
@@ -207,8 +204,9 @@ def train(model,
                 loss_str = loss_str
                 for key, value in avg_loss.items():
                     if key != 'all':
-                        loss_str = loss_str + ' ' + key + '={:.4f}'.format(
-                            value)
+                        loss_str = f'{loss_str} {key}' + '={:.4f}'.format(
+                            value
+                        )
                 logger.info(
                     "[TRAIN] epoch={}, iter={}/{}, loss={:.4f}, lr={:.6f}, batch_cost={:.4f}, reader_cost={:.5f}, ips={:.4f} samples/sec | ETA {}\n{}\n"
                     .format((iter - 1) // iters_per_epoch + 1, iter, iters,
@@ -218,7 +216,7 @@ def train(model,
                             ), eta, loss_str))
                 if use_vdl:
                     for key, value in avg_loss.items():
-                        log_tag = 'Train/' + key
+                        log_tag = f'Train/{key}'
                         log_writer.add_scalar(log_tag, value, iter)
 
                     log_writer.add_scalar('Train/lr', lr, iter)
@@ -227,9 +225,7 @@ def train(model,
                     log_writer.add_scalar('Train/reader_cost',
                                           avg_train_reader_cost, iter)
                     if iter % log_image_iters == 0:
-                        vis_dict = {}
-                        # ground truth
-                        vis_dict['ground truth/img'] = data['img'][0]
+                        vis_dict = {'ground truth/img': data['img'][0]}
                         for key in data['gt_fields']:
                             key = key[0]
                             vis_dict['/'.join(['ground truth', key])] = data[
@@ -241,15 +237,14 @@ def train(model,
                         visual_in_traning(
                             log_writer=log_writer, vis_dict=vis_dict, step=iter)
 
-                for key in avg_loss.keys():
+                for key in avg_loss:
                     avg_loss[key] = 0.
                 reader_cost_averager.reset()
                 batch_cost_averager.reset()
 
             # save model
             if (iter % save_interval == 0 or iter == iters) and local_rank == 0:
-                current_save_dir = os.path.join(save_dir,
-                                                "iter_{}".format(iter))
+                current_save_dir = os.path.join(save_dir, f"iter_{iter}")
                 if not os.path.isdir(current_save_dir):
                     os.makedirs(current_save_dir)
                 paddle.save(model.state_dict(),
@@ -278,34 +273,35 @@ def train(model,
                 model.train()
 
             # save best model and add evaluation results to vdl
-            if (iter % save_interval == 0 or iter == iters) and local_rank == 0:
-                if val_dataset is not None and iter >= eval_begin_iters:
-                    if metrics_data[metrics[0]] < best_metrics_data[metrics[0]]:
-                        best_iter = iter
-                        best_metrics_data = metrics_data.copy()
-                        best_model_dir = os.path.join(save_dir, "best_model")
-                        paddle.save(
-                            model.state_dict(),
-                            os.path.join(best_model_dir, 'model.pdparams'))
-                        save_best(best_model_dir, best_metrics_data, iter)
+            if (
+                (iter % save_interval == 0 or iter == iters)
+                and local_rank == 0
+                and val_dataset is not None
+                and iter >= eval_begin_iters
+            ):
+                if metrics_data[metrics[0]] < best_metrics_data[metrics[0]]:
+                    best_iter = iter
+                    best_metrics_data = metrics_data.copy()
+                    best_model_dir = os.path.join(save_dir, "best_model")
+                    paddle.save(
+                        model.state_dict(),
+                        os.path.join(best_model_dir, 'model.pdparams'))
+                    save_best(best_model_dir, best_metrics_data, iter)
 
-                    show_list = []
-                    for key, value in best_metrics_data.items():
-                        show_list.append((key, value))
-                    log_str = '[EVAL] The model with the best validation {} ({:.4f}) was saved at iter {}.'.format(
-                        show_list[0][0], show_list[0][1], best_iter)
-                    if len(show_list) > 1:
-                        log_str += " While"
-                        for i in range(1, len(show_list)):
-                            log_str = log_str + ' {}: {:.4f},'.format(
-                                show_list[i][0], show_list[i][1])
-                        log_str = log_str[:-1]
-                    logger.info(log_str)
+                show_list = list(best_metrics_data.items())
+                log_str = '[EVAL] The model with the best validation {} ({:.4f}) was saved at iter {}.'.format(
+                    show_list[0][0], show_list[0][1], best_iter)
+                if len(show_list) > 1:
+                    log_str += " While"
+                    for i in range(1, len(show_list)):
+                        log_str = log_str + ' {}: {:.4f},'.format(
+                            show_list[i][0], show_list[i][1])
+                    log_str = log_str[:-1]
+                logger.info(log_str)
 
-                    if use_vdl:
-                        for key, value in metrics_data.items():
-                            log_writer.add_scalar('Evaluate/' + key, value,
-                                                  iter)
+                if use_vdl:
+                    for key, value in metrics_data.items():
+                        log_writer.add_scalar(f'Evaluate/{key}', value, iter)
 
             batch_start = time.time()
 

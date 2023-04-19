@@ -51,8 +51,7 @@ def par_line_dist(L1, L2):
     new_A2 = 1
     new_B2 = B2 / A2
     new_C2 = C2 / A2
-    dist = (np.abs(new_C1 - new_C2)) / (np.sqrt(new_A2**2 + new_B2**2))
-    return dist
+    return (np.abs(new_C1 - new_C2)) / (np.sqrt(new_A2**2 + new_B2**2))
 
 
 # 计算点在直线的投影位置

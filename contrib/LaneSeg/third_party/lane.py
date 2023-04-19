@@ -29,10 +29,9 @@ class LaneEval(object):
         if len(xs) > 1:
             LaneEval.lr.fit(ys[:, None], xs)
             k = LaneEval.lr.coef_[0]
-            theta = np.arctan(k)
+            return np.arctan(k)
         else:
-            theta = 0
-        return theta
+            return 0
 
     @staticmethod
     def line_accuracy(pred, gt, thresh):
@@ -60,7 +59,7 @@ class LaneEval(object):
                     np.array(x_preds), np.array(x_gts), thresh)
                 for x_preds in pred
             ]
-            max_acc = np.max(accs) if len(accs) > 0 else 0.
+            max_acc = np.max(accs) if accs else 0.
             if max_acc < LaneEval.pt_thresh:
                 fn += 1
             else:

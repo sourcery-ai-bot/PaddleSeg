@@ -137,7 +137,7 @@ class CityDataset(io.Dataset):
         self.edge = edge
 
         # Files
-        item_list_filepath = os.path.join(self.list_path, self.split + ".txt")
+        item_list_filepath = os.path.join(self.list_path, f"{self.split}.txt")
         if not os.path.exists(item_list_filepath):
             raise Warning("split must be train/val/trainval")
         self.image_filepath = os.path.join(self.data_path, "leftImg8bit")
@@ -155,8 +155,9 @@ class CityDataset(io.Dataset):
         synthia_set_13 = [0, 1, 2, 6, 7, 8, 10, 11, 12, 13, 15, 17, 18]
         self.trainid_to_13id = {id: i for i, id in enumerate(synthia_set_13)}
 
-        print("{} num images in Cityscapes {} set have been loaded.".format(
-            len(self.items), self.split))
+        print(
+            f"{len(self.items)} num images in Cityscapes {self.split} set have been loaded."
+        )
 
     def id2trainId(self, label, reverse=False, ignore_label=255):
         label_copy = ignore_label * np.ones(label.shape, dtype=np.float32)
@@ -181,18 +182,17 @@ class CityDataset(io.Dataset):
         filename = id.split("train_")[-1].split("val_")[-1].split("test_")[-1]
         image_filepath = os.path.join(self.image_filepath,
                                       id.split("_")[0], id.split("_")[1])
-        image_filename = filename + "_leftImg8bit.png"
+        image_filename = f"{filename}_leftImg8bit.png"
         image_path = os.path.join(image_filepath, image_filename)
         image = Image.open(image_path).convert("RGB")
 
         gt_filepath = os.path.join(self.gt_filepath,
                                    id.split("_")[0], id.split("_")[1])
-        gt_filename = filename + "_gtFine_labelIds.png"
+        gt_filename = f"{filename}_gtFine_labelIds.png"
         gt_image_path = os.path.join(gt_filepath, gt_filename)
         gt_image = Image.open(gt_image_path)
 
-        if (self.split == "train" or
-                self.split == "trainval") and self.training:
+        if self.split in ["train", "trainval"] and self.training:
             image, gt_image, edge_mask = self._train_sync_transform(image,
                                                                     gt_image)
             return image, gt_image, edge_mask
@@ -260,9 +260,9 @@ class CityDataset(io.Dataset):
         if self.gaussian_blur:
             # gaussian blur as in PSP
             b = random.random()
-            c = random.random()
             # print(a,b,c)
             if b < 0.5:
+                c = random.random()
                 img = img.filter(ImageFilter.GaussianBlur(radius=c))
         # final transform
         if mask:
@@ -306,9 +306,7 @@ class CityDataset(io.Dataset):
         image -= IMG_MEAN
         image = image.transpose((2, 0, 1)).copy()  # (C x H x W)
 
-        new_image = paddle.to_tensor(image)
-
-        return new_image
+        return paddle.to_tensor(image)
 
     def _mask_transform(self, gt_image):
         target = np.asarray(gt_image, np.float32)

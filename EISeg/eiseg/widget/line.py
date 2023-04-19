@@ -120,5 +120,4 @@ class LineItem(QtWidgets.QGraphicsLineItem):
         if debug:
             print("dir", dx, dy)
         p = QtCore.QPointF(dx * w, dy * w)
-        poly = QtGui.QPolygonF([s - p, s + p, e + p, e - p])
-        return poly
+        return QtGui.QPolygonF([s - p, s + p, e + p, e - p])

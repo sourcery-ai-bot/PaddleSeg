@@ -98,8 +98,6 @@ class PPMatting(nn.Layer):
         return loss_func_dict
 
     def loss(self, logit_dict, label_dict):
-        loss = {}
-
         # semantic loss computation
         # get semantic label
         semantic_label = label_dict['trimap']
@@ -109,8 +107,7 @@ class PPMatting(nn.Layer):
         loss_semantic = self.loss_func_dict['semantic'][0](
             paddle.log(logit_dict['semantic'] + 1e-6),
             semantic_label.squeeze(1))
-        loss['semantic'] = loss_semantic
-
+        loss = {'semantic': loss_semantic}
         # detail loss computation
         transparent = label_dict['trimap'] == 128
         detail_alpha_loss = self.loss_func_dict['detail'][0](
@@ -156,8 +153,7 @@ class PPMatting(nn.Layer):
         index = paddle.argmax(semantic_map, axis=1, keepdim=True)
         transition_mask = (index == 1).astype('float32')
         fg = (index == 0).astype('float32')
-        alpha = detail_map * transition_mask + fg
-        return alpha
+        return detail_map * transition_mask + fg
 
     def init_weight(self):
         if self.pretrained is not None:

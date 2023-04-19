@@ -85,10 +85,7 @@ class LaneRandomRotation:
                     borderMode=cv2.BORDER_CONSTANT,
                     borderValue=self.label_padding_value)
 
-        if label is None:
-            return (im, )
-        else:
-            return (im, label)
+        return (im, ) if label is None else (im, label)
 
 
 @manager.TRANSFORMS.add_component
@@ -139,7 +136,4 @@ class SubImgCrop:
             if label is not None:
                 label = label[:, :-self.offset_right]
 
-        if label is None:
-            return (im, )
-        else:
-            return (im, label)
+        return (im, ) if label is None else (im, label)

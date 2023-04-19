@@ -40,9 +40,8 @@ class GCABaseline(nn.Layer):
 
         if self.training:
             logit_dict = {'alpha_pred': alpha_pred, }
-            loss_dict = {}
             alpha_gt = inputs['alpha']
-            loss_dict["alpha"] = F.l1_loss(alpha_pred, alpha_gt)
+            loss_dict = {"alpha": F.l1_loss(alpha_pred, alpha_gt)}
             loss_dict["all"] = loss_dict["alpha"]
             return logit_dict, loss_dict
 
@@ -206,14 +205,15 @@ class ResNet_D_Dec(nn.Layer):
                   self.large_kernel)
         ]
         self.inplanes = planes * block.expansion
-        for _ in range(1, blocks):
-            layers.append(
-                block(
-                    self.inplanes,
-                    planes,
-                    norm_layer=norm_layer,
-                    large_kernel=self.large_kernel))
-
+        layers.extend(
+            block(
+                self.inplanes,
+                planes,
+                norm_layer=norm_layer,
+                large_kernel=self.large_kernel,
+            )
+            for _ in range(1, blocks)
+        )
         return nn.Sequential(*layers)
 
     def forward(self, x, mid_fea):
@@ -230,18 +230,13 @@ class ResNet_D_Dec(nn.Layer):
         x = self.leaky_relu(x)
         x = self.conv2(x)
 
-        alpha = (self.tanh(x) + 1.0) / 2.0
-
-        return alpha
+        return (self.tanh(x) + 1.0) / 2.0
 
     def init_weight(self):
         for layer in self.sublayers():
             if isinstance(layer, nn.Conv2D):
 
-                if hasattr(layer, "weight_orig"):
-                    param = layer.weight_orig
-                else:
-                    param = layer.weight
+                param = layer.weight_orig if hasattr(layer, "weight_orig") else layer.weight
                 param_init.xavier_uniform(param)
 
             elif isinstance(layer, (nn.BatchNorm, nn.SyncBatchNorm)):
@@ -272,9 +267,7 @@ class ResShortCut_D_Dec(ResNet_D_Dec):
         x = self.leaky_relu(x) + fea1
         x = self.conv2(x)
 
-        alpha = (self.tanh(x) + 1.0) / 2.0
-
-        return alpha
+        return (self.tanh(x) + 1.0) / 2.0
 
 
 class ResGuidedCxtAtten_Dec(ResNet_D_Dec):
@@ -300,6 +293,4 @@ class ResGuidedCxtAtten_Dec(ResNet_D_Dec):
         x = self.leaky_relu(x) + fea1
         x = self.conv2(x)
 
-        alpha = (self.tanh(x) + 1.0) / 2.0
-
-        return alpha
+        return (self.tanh(x) + 1.0) / 2.0

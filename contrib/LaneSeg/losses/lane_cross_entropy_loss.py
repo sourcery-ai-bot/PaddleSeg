@@ -31,5 +31,4 @@ class LaneCrossEntropyLoss(nn.Layer):
         loss_func = nn.NLLLoss(
             ignore_index=self.ignore_index,
             weight=paddle.to_tensor(self.weights))
-        loss = loss_func(temp, label)
-        return loss
+        return loss_func(temp, label)

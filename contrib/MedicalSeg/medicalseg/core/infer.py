@@ -46,16 +46,15 @@ def reverse_transform(pred, ori_shape, transforms, mode='trilinear'):
     intTypeList = [paddle.int8, paddle.int16, paddle.int32, paddle.int64]
     dtype = pred.dtype
     for item in reverse_list[::-1]:
-        if item[0] == 'resize':
-            d, h, w = item[1][0], item[1][1], item[1][2]
-            if paddle.get_device() == 'cpu' and dtype in intTypeList:
-                pred = paddle.cast(pred, 'float32')
-                pred = F.interpolate(pred, (d, h, w), mode=mode)
-                pred = paddle.cast(pred, dtype)
-            else:
-                pred = F.interpolate(pred, (d, h, w), mode=mode)
+        if item[0] != 'resize':
+            raise Exception(f"Unexpected info '{item[0]}' in im_info")
+        d, h, w = item[1][0], item[1][1], item[1][2]
+        if paddle.get_device() == 'cpu' and dtype in intTypeList:
+            pred = paddle.cast(pred, 'float32')
+            pred = F.interpolate(pred, (d, h, w), mode=mode)
+            pred = paddle.cast(pred, dtype)
         else:
-            raise Exception("Unexpected info '{}' in im_info".format(item[0]))
+            pred = F.interpolate(pred, (d, h, w), mode=mode)
     return pred
 
 
@@ -83,8 +82,8 @@ def inference(model, im, ori_shape=None, transforms=None, sw_num=None):
         logits = model(im)
     if not isinstance(logits, collections.abc.Sequence):
         raise TypeError(
-            "The type of logits must be one of collections.abc.Sequence, e.g. list, tuple. But received {}"
-            .format(type(logits)))
+            f"The type of logits must be one of collections.abc.Sequence, e.g. list, tuple. But received {type(logits)}"
+        )
     logit = logits[0]
 
     if hasattr(model, 'data_format') and model.data_format == 'NDHWC':
@@ -122,32 +121,23 @@ def dense_patch_slices(image_size, patch_size, scan_interval):
         if scan_interval[i] != 0 else 1 for i in range(num_spatial_dims)
     ]
     slices = []
-    if num_spatial_dims == 3:
-        for i in range(scan_num[0]):
-            start_i = i * scan_interval[0]
-            start_i -= max(start_i + patch_size[0] - image_size[0], 0)
-            slice_i = slice(start_i, start_i + patch_size[0])
+    for i in range(scan_num[0]):
+        start_i = i * scan_interval[0]
+        start_i -= max(start_i + patch_size[0] - image_size[0], 0)
+        slice_i = slice(start_i, start_i + patch_size[0])
 
-            for j in range(scan_num[1]):
-                start_j = j * scan_interval[1]
-                start_j -= max(start_j + patch_size[1] - image_size[1], 0)
-                slice_j = slice(start_j, start_j + patch_size[1])
+        for j in range(scan_num[1]):
+            start_j = j * scan_interval[1]
+            start_j -= max(start_j + patch_size[1] - image_size[1], 0)
+            slice_j = slice(start_j, start_j + patch_size[1])
 
-                for k in range(0, scan_num[2]):
+            if num_spatial_dims == 3:
+                for k in range(scan_num[2]):
                     start_k = k * scan_interval[2]
                     start_k -= max(start_k + patch_size[2] - image_size[2], 0)
                     slice_k = slice(start_k, start_k + patch_size[2])
                     slices.append((slice_i, slice_j, slice_k))
-    else:
-        for i in range(scan_num[0]):
-            start_i = i * scan_interval[0]
-            start_i -= max(start_i + patch_size[0] - image_size[0], 0)
-            slice_i = slice(start_i, start_i + patch_size[0])
-
-            for j in range(scan_num[1]):
-                start_j = j * scan_interval[1]
-                start_j -= max(start_j + patch_size[1] - image_size[1], 0)
-                slice_j = slice(start_j, start_j + patch_size[1])
+            else:
                 slices.append((slice_i, slice_j))
     return slices
 
@@ -167,10 +157,9 @@ def sliding_window_inference(inputs, roi_size, sw_batch_size, predictor):
         execute on 1 image/per inference, run a batch of window slices of 1 input image.
     """
     num_spatial_dims = len(inputs.shape) - 2
-    assert len(
-        roi_size
-    ) == num_spatial_dims, 'roi_size {} does not match input dims.'.format(
-        roi_size)
+    assert (
+        len(roi_size) == num_spatial_dims
+    ), f'roi_size {roi_size} does not match input dims.'
 
     # determine image spatial size and batch size
     # Note: all input images must have the same image size and batch size
@@ -217,7 +206,7 @@ def sliding_window_inference(inputs, roi_size, sw_batch_size, predictor):
         slice_batches.append(torch.stack(input_slices))
 
     # Perform predictions
-    output_rois = list()
+    output_rois = []
     for data in slice_batches:
         seg_prob = predictor(data)  # batched patch segmentation
 

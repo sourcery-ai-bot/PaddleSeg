@@ -44,14 +44,8 @@ if logFolder is None or len(logFolder) == 0:
 if not osp.exists(logFolder):
     os.makedirs(logFolder)
 
-if logLevel:
-    logLevel = logging.DEBUG
-else:
-    logLevel = logging.CRITICAL
-if logDays:
-    logDays = int(logDays)
-else:
-    logDays = 7
+logLevel = logging.DEBUG if logLevel else logging.CRITICAL
+logDays = int(logDays) if logDays else 7
 # TODO: 删除大于logDays 的 log
 
 t = datetime.now().strftime("%Y-%m-%d_%H-%M-%S")

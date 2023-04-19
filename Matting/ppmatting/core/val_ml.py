@@ -50,7 +50,7 @@ def reverse_transform(alpha, trans_info):
             h, w = item[1][0].numpy()[0], item[1][1].numpy()[0]
             alpha = alpha[0:h, 0:w]
         else:
-            raise Exception("Unexpected info '{}' in im_info".format(item[0]))
+            raise Exception(f"Unexpected info '{item[0]}' in im_info")
     return alpha
 
 
@@ -75,8 +75,9 @@ def evaluate_ml(model,
     conn_metric = metric.Conn()
 
     if print_detail:
-        logger.info("Start evaluating (total_samples: {}, total_iters: {})...".
-                    format(len(eval_dataset), total_iters))
+        logger.info(
+            f"Start evaluating (total_samples: {len(eval_dataset)}, total_iters: {total_iters})..."
+        )
     progbar_val = progbar.Progbar(target=total_iters, verbose=1)
     reader_cost_averager = TimeAverager()
     batch_cost_averager = TimeAverager()
@@ -127,11 +128,11 @@ def evaluate_ml(model,
             save_name = data['img_name'][0]
             name, ext = os.path.splitext(save_name)
             if save_name == img_name:
-                save_name = name + '_' + str(i) + ext
+                save_name = f'{name}_{str(i)}{ext}'
                 i += 1
             else:
                 img_name = save_name
-                save_name = name + '_' + str(0) + ext
+                save_name = f'{name}_0{ext}'
                 i = 1
             save_alpha_pred(alpha_pred_one, os.path.join(save_dir, save_name))
 
@@ -157,6 +158,6 @@ def evaluate_ml(model,
 
     logger.info('[EVAL] SAD: {:.4f}, MSE: {:.4f}, Grad: {:.4f}, Conn: {:.4f}'.
                 format(sad, mse, grad, conn))
-    logger.info('{}'.format(ignore_cnt))
+    logger.info(f'{ignore_cnt}')
 
     return sad, mse, grad, conn

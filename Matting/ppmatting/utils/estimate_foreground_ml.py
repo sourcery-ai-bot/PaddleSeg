@@ -111,7 +111,7 @@ def _estimate_fb_ml(
         dx = [-1, 1, 0, 0]
         dy = [0, 0, -1, 1]
 
-        for i_iter in range(n_iter):
+        for _ in range(n_iter):
             for y in prange(h):
                 for x in range(w):
                     a0 = alpha[y, x]
@@ -230,7 +230,4 @@ def estimate_foreground_ml(
         small_size,
         gradient_weight, )
 
-    if return_background:
-        return foreground, background
-
-    return foreground
+    return (foreground, background) if return_background else foreground

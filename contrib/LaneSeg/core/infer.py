@@ -128,7 +128,7 @@ def reverse_transform(pred, ori_shape, transforms, mode='nearest'):
             h, w = item[1][0], item[1][1]
             pred = pred[:, :, 0:h, 0:w]
         else:
-            raise Exception("Unexpected info '{}' in im_info".format(item[0]))
+            raise Exception(f"Unexpected info '{item[0]}' in im_info")
     return pred
 
 
@@ -151,14 +151,13 @@ def inference(model, im, ori_shape=None, transforms=None):
     logits = model(im)
     if not isinstance(logits, collections.abc.Sequence):
         raise TypeError(
-            "The type of logits must be one of collections.abc.Sequence, e.g. list, tuple. But received {}"
-            .format(type(logits)))
+            f"The type of logits must be one of collections.abc.Sequence, e.g. list, tuple. But received {type(logits)}"
+        )
     logit = logits[0]
     if hasattr(model, 'data_format') and model.data_format == 'NHWC':
         logit = logit.transpose((0, 3, 1, 2))
-    if ori_shape is not None:
-        pred = reverse_transform(logit, ori_shape, transforms, mode='bilinear')
-        pred = paddle.argmax(pred, axis=1, keepdim=True, dtype='int32')
-        return pred, logits
-    else:
+    if ori_shape is None:
         return logit, logits
+    pred = reverse_transform(logit, ori_shape, transforms, mode='bilinear')
+    pred = paddle.argmax(pred, axis=1, keepdim=True, dtype='int32')
+    return pred, logits
